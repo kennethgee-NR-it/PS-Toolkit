@@ -1,0 +1,12 @@
+{
+  "name": "ps-toolbox-server",
+  "private": true,
+  "description": "MySQL-backed API for the PS Toolbox Conference Rooms module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js"
+  },
+  "dependencies": {
+    "mysql2": "^3.11.0"
+  }
+}

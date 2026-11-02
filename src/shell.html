@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Professional Services Toolbox: Conference Rooms, Door Access and Network Infrastructure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+<!-- build:styles -->
+</style>
+</head>
+<body class="learning">
+<a class="skip" href="#main">Skip to content</a>
+<div class="shell">
+<aside class="side" id="side" aria-label="Company and jobs">
+  <div class="cosw" id="coSw">
+    <button type="button" class="cobtn" id="coBtn" aria-haspopup="true" aria-expanded="false" aria-controls="coMenu" title="Switch company"><span class="cotx"><span class="con" id="coName">Add company name</span><span class="cos" id="coSite"></span></span><span class="caret" aria-hidden="true">▾</span></button>
+    <div class="comenu" id="coMenu" role="dialog" aria-label="Switch company" hidden>
+      <input type="search" id="coFind" placeholder="Find a company" aria-label="Find a company" autocomplete="off">
+      <ul class="colist" id="coList"></ul>
+      <div class="coacts"><button type="button" class="btn small primary" data-dbnew>+ New company</button><button type="button" class="btn small" data-project>Edit company details</button></div>
+    </div>
+  </div>
+  <nav class="jobs" aria-label="Jobs">
+    <div class="jgrp"><div class="jh"><span>Conference rooms</span><button type="button" class="jadd" id="navRoomAdd" aria-label="Add a room" title="Add a room"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 2v10M2 7h10"/></svg></button></div><ul class="jlist" id="navRooms"></ul></div>
+    <div class="jgrp"><div class="jh"><span>Door access</span><button type="button" class="jadd" id="navDoorAdd" aria-label="Add a door" title="Add a door"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 2v10M2 7h10"/></svg></button></div><ul class="jlist" id="navDoors"></ul></div>
+    <div class="jgrp"><div class="jh"><span>Network</span></div><ul class="jlist" id="navNet"></ul></div>
+  </nav>
+  <div class="sidefoot">
+    <button type="button" class="syncst" id="dbChip" data-project title="Database sync status"></button>
+    <div class="sidebtns rooms-only"><button type="button" class="btn quiet" id="helpBtn" aria-haspopup="dialog">Glossary</button><button type="button" class="btn quiet switch" id="learnToggle" aria-pressed="true"><span class="knob" aria-hidden="true"></span>Explanations</button></div>
+  </div>
+</aside>
+<div class="navscrim" id="navScrim" hidden></div>
+<div class="work">
+<div class="mtop">
+  <button type="button" class="mnav" id="mNavBtn" aria-controls="side" aria-expanded="false"><span class="mtx"><span class="mco" id="mCo"></span><span class="mitem"><span id="mName"></span><span class="mst" id="mSt"></span></span></span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg></button>
+</div>
+<div id="doorsWrap" role="tabpanel" aria-labelledby="m-doors" hidden><iframe id="doorsFrame" title="UniFi Access wiring simulator"></iframe></div>
+<div id="netWrap" role="tabpanel" aria-labelledby="m-net" hidden><iframe id="netFrame" title="UniFi network and home run planner"></iframe></div>
+<div class="top">
+  <header class="rhead" id="roomDet">
+    <div class="rtitle">
+      <div class="rkind" id="rKind">Conference room</div>
+      <input class="rname" id="roomTitle" type="text" aria-label="Room name" autocomplete="off" spellcheck="false">
+      <p class="rmeta" id="rMeta"></p>
+    </div>
+    <div class="racts">
+      <button type="button" class="btn" id="rdDateBtn"><span id="rdDateLbl">Set install date</span></button><input type="date" id="rdDate" class="vh" tabindex="-1" aria-label="Installation date">
+      <div class="pop"><button type="button" class="btn" id="roomMenuBtn" aria-haspopup="true" aria-expanded="false" aria-controls="roomMenu" aria-label="More room actions" title="More room actions"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><circle cx="4" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="14" cy="9" r="1.6"/></svg></button>
+        <div class="popmenu" id="roomMenu" hidden>
+          <label class="pf">Room address<input type="text" id="rdSite" autocomplete="street-address" placeholder="Street address, floor, suite"></label>
+          <button type="button" class="mi" data-rdup>Duplicate this room</button>
+          <button type="button" class="mi" data-project>All rooms and company details</button>
+          <button type="button" class="mi" id="resetBtn" title="Clears this room’s design, survey and install progress">Start over</button>
+          <button type="button" class="mi warnt" id="roomDelCur">Delete this room</button>
+        </div>
+      </div>
+      <button type="button" class="btn primary" data-report aria-haspopup="dialog">Save report</button>
+    </div>
+  </header>
+  <input id="roomName" type="hidden" value="Conference room 1">
+  <div class="stages" role="tablist" aria-label="Job stages">
+    <button class="stage" role="tab" id="t-design" data-tab="design" aria-controls="p-design"><span class="n">1</span><span class="tl">Design</span><span class="ts">Platform, display, mount</span><span class="badge" id="b-design"></span></button>
+    <button class="stage" role="tab" id="t-plan" data-tab="plan" aria-controls="p-plan"><span class="n">2</span><span class="tl">Plan</span><span class="ts">Room fit and connections</span><span class="badge" id="b-plan"></span></button>
+    <button class="stage" role="tab" id="t-survey" data-tab="survey" aria-controls="p-survey"><span class="n">3</span><span class="tl">Survey</span><span class="ts">Is the room ready?</span><span class="badge" id="b-survey"></span></button>
+    <button class="stage" role="tab" id="t-install" data-tab="install" aria-controls="p-install"><span class="n">4</span><span class="tl">Install</span><span class="ts">Build and sign off</span><span class="badge" id="b-install"></span></button>
+  </div>
+</div>
+<main id="main">
+
+<section role="tabpanel" id="p-design" aria-labelledby="t-design" tabindex="-1">
+  <p class="learn lead">Pick the meeting platform, the video bar, the display size and what it mounts to. The results update as you go.</p>
+  <details class="panel examples" id="examples"><summary>Start from an example room</summary>
+    <p class="hint" style="margin:8px 0 4px">Loading an example replaces the design settings. Survey answers and install progress stay as they are.</p>
+    <h3 class="gsub">Typical rooms</h3><div class="tpl" id="tplGood"></div>
+    <h3 class="gsub">Common mistakes, and how the checks catch them</h3><div class="tpl" id="tplBad"></div>
+  </details>
+  <div id="tplNote" aria-live="polite"></div>
+  <div class="design">
+    <div class="panel form" id="controls" aria-label="Room configuration"></div>
+    <div class="preview">
+      <div id="answer" aria-live="polite"></div>
+      <div class="panel" id="checksPanel">
+        <div class="panel-h"><h3 id="checksH" tabindex="-1">Best-practice checks</h3><button type="button" class="btn small primary" id="fixAll">Fix automatically</button></div>
+        <p class="fixmsg" id="fixMsg" role="status" aria-live="polite"></p>
+        <div class="filter" id="ckFilter" role="group" aria-label="Show checks"></div>
+        <ul class="checks" id="checks" style="margin-top:10px"></ul>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3>Display wall</h3></div>
+        <p class="learn">Drawn to scale from the floor to the ceiling, with the display shown see-through. The green-outlined plate sits behind it, red dots are anchors (with their distance from the left corner), and a blue arrow shows any sideways slide of the plate. The blue dashed line is seated eye height; the green line is the mount top you mark on the wall.</p>
+        <div id="slideOut" aria-live="polite"></div><div class="canvas wide" id="wallview"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3>Wall layout</h3></div>
+        <div id="layoutOut"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3>Measuring the mount height</h3></div>
+        <div id="heights"></div>
+      </div>
+    </div>
+  </div>
+  <div class="next"><button type="button" class="btn primary" data-go="plan">Next: plan the room →</button></div>
+</section>
+
+<section role="tabpanel" id="p-plan" aria-labelledby="t-plan" tabindex="-1" hidden>
+  <p class="learn lead">Check that everyone can see the screen, the camera sees everyone, and the microphones hear everyone. Then confirm what plugs into what, and what network and power the room needs.</p>
+  <div class="quick" id="quickPlan" aria-label="Essentials"></div>
+  <div class="planGrid">
+    <div class="panel">
+      <div class="panel-h"><h3 id="planViewTitle">Room layout</h3><div class="seg" role="group" aria-label="View" style="margin:0" id="planSeg"></div></div>
+      <div id="planTop"><div class="canvas" id="topview"></div><p class="learn">Top-down view. The shaded wedge is roughly what the camera sees; seats outside it are marked. Rally Mic Pods are the small circles on the table.</p></div>
+      <div id="planElev" hidden><div class="canvas" id="elevview"></div><p class="learn">The full picture: furniture, display, mount, fasteners and video bar at real heights. Pair it with the Connections view for the wiring.</p></div>
+      <div id="planSide" hidden><div class="canvas" id="sideview"></div><p class="learn">Side view from the wall to the farthest seat. Lines show the sightline from the farthest seated viewer to the screen, and where the camera sits compared with eye level.</p></div>
+      <div id="planFlow" hidden><div class="canvas" id="flowview"></div>
+        <div class="legend">
+          <span><i style="background:#7A4CC2"></i>HDMI</span><span><i style="background:#2C6FB7"></i>USB</span><span><i style="background:#2D8A3E"></i>Ethernet</span><span><i style="background:#C97B12"></i>Ethernet with PoE</span><span><i style="background:#566370"></i>Logitech device cable</span>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h3>Room numbers</h3></div>
+      <div id="numbers"></div>
+    </div>
+  </div>
+  <div class="next"><button type="button" class="btn" data-go="design">← Back to design</button><button type="button" class="btn primary" data-go="survey">Next: survey the room →</button></div>
+</section>
+
+<section role="tabpanel" id="p-survey" aria-labelledby="t-survey" tabindex="-1" hidden>
+  <p class="learn lead">Walk the room before ordering or booking the install. Mark each check. Anything not ready is a blocker: fix it, or get it into the quote first. The list follows what you chose in Design.</p>
+  <div class="panel">
+    <div id="svSummary" class="svsum" aria-live="polite"></div>
+    <div class="filter" id="svFilter" role="group" aria-label="Show survey items"></div>
+    <div id="survey"></div>
+  </div>
+  <div class="next"><button type="button" class="btn" data-go="plan">← Back to plan</button><button type="button" class="btn primary" data-go="install">Next: install →</button></div>
+</section>
+
+<section role="tabpanel" id="p-install" aria-labelledby="t-install" tabindex="-1" hidden>
+  <p class="learn lead">Everything for install day, built from your design: step-by-step instructions with what to check, the equipment list, every cable, and the acceptance test to sign off with the owner.</p>
+  <div class="panel">
+    <div class="subtabs" role="tablist" aria-label="Install sections" id="subtabs">
+      <button class="subtab" role="tab" data-sub="steps" aria-controls="s-steps">Steps</button>
+      <button class="subtab" role="tab" data-sub="equip" aria-controls="s-equip">Equipment</button>
+      <button class="subtab" role="tab" data-sub="cables" aria-controls="s-cables">Cable list</button>
+      <button class="subtab" role="tab" data-sub="calendar" aria-controls="s-calendar">Accounts and calendar</button>
+      <button class="subtab" role="tab" data-sub="accept" aria-controls="s-accept">Acceptance test</button>
+    </div>
+    <div role="tabpanel" id="s-steps">
+      <div id="stepsProg" class="svsum"></div>
+      <details class="tplwrap"><summary>Tools and materials</summary><ul class="tools" id="tools" style="margin-top:10px"></ul></details>
+      <ol class="steps" id="steps" style="margin-top:14px"></ol>
+    </div>
+    <div role="tabpanel" id="s-equip" hidden>
+      <p class="learn">The highlighted product is the one in your design. The others are common alternatives of the same type. Mixing brands is possible, but check each device is certified for your meeting platform.</p>
+      <div class="tablewrap"><table class="equip" id="equip"></table></div>
+    </div>
+    <div role="tabpanel" id="s-cables" hidden>
+      <div class="tablewrap"><table id="cables"></table></div>
+      <p class="foot">Lengths are from your design. Label both ends of every cable with the device and port.</p>
+    </div>
+    <div role="tabpanel" id="s-calendar" hidden>
+      <p class="learn">The room system and the scheduling panel both read the room’s calendar. Set this up with IT before install day; most steps need an admin account.</p>
+      <div id="calendarGuide"></div>
+    </div>
+    <div role="tabpanel" id="s-accept" hidden>
+      <p class="learn">Run these with the owner or their representative in the room. Record a result for each; results are saved on this laptop.</p>
+      <div class="tablewrap"><table id="accept"></table></div>
+    </div>
+  </div>
+  <div class="next"><button type="button" class="btn" data-go="survey">← Back to survey</button><button type="button" class="btn primary" data-report aria-haspopup="dialog">Save the Word report</button></div>
+</section>
+</main>
+</div>
+</div>
+<nav class="mobnav" aria-label="Modules">
+  <button type="button" data-mod="rooms"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="16" height="10" rx="1.5"/><path d="M8 19h6M11 15v4"/></svg>Rooms</button>
+  <button type="button" data-mod="doors"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="5" y="2.5" width="12" height="17" rx="1"/><circle cx="14" cy="11" r="1"/></svg>Doors</button>
+  <button type="button" data-mod="net"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 9a11 11 0 0 1 16 0M6 12a7 7 0 0 1 10 0M9 15a3 3 0 0 1 4 0"/><circle cx="11" cy="18" r="1"/></svg>Network</button>
+  <button type="button" data-report aria-haspopup="dialog"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3h7l4 4v12H6z"/><path d="M13 3v4h4M9 12h5M9 15h5"/></svg>Report</button>
+</nav>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="projectDrawer" role="dialog" aria-modal="true" aria-labelledby="pj-h" hidden>
+  <div class="panel-h"><h2 id="pj-h">Project and rooms</h2><button type="button" class="btn small" data-close>Close</button></div>
+  <p class="rpintro">The company and location apply to every room and to the Word report. Each room keeps its own design, survey answers and install progress.</p>
+  <div class="rpform">
+    <label>Company name<input type="text" id="pjClient" autocomplete="organization" placeholder="Acme Corp"></label>
+    <label>Location<input type="text" id="pjSite" placeholder="Site address and floor"></label>
+  </div>
+  <h3 class="gsub" style="margin:4px 0 8px">Rooms</h3>
+  <ul class="roomlist" id="roomList"></ul>
+  <div class="roomadd"><button type="button" class="btn primary" id="roomNew">Add a room</button><button type="button" class="btn" id="roomDup">Duplicate current room</button></div>
+  <h3 class="gsub" style="margin:22px 0 6px">Database</h3>
+  <p class="hint">Every room saves automatically to this browser and to the company database, so the project can be opened on any computer. Door access and network plans still save in this browser only.</p>
+  <p class="fixmsg" id="dbMsg" role="status" aria-live="polite"></p>
+  <div class="roomadd" id="dbConflict" hidden><button type="button" class="btn primary" id="dbMine">Keep this device’s version</button><button type="button" class="btn" id="dbTheirs">Load the database version</button></div>
+  <ul class="roomlist" id="dbList" style="margin-top:10px"></ul>
+  <div class="roomadd"><button type="button" class="btn" data-dbnew>+ New company</button></div>
+  <h3 class="gsub" style="margin:22px 0 6px">Backup</h3>
+  <p class="hint">Download a backup, including floor plan images, to move the project to another computer or keep a copy with the job file.</p>
+  <div class="roomadd"><button type="button" class="btn" id="bkSave">Download backup</button><label class="btn" for="bkFile">Restore from backup</label><input type="file" id="bkFile" accept=".json,application/json" hidden></div>
+  <p class="fixmsg" id="bkMsg" role="status" aria-live="polite"></p>
+  <p class="hint" style="margin-top:8px">A duplicate copies the design only; its survey and install progress start empty.</p>
+</aside>
+<aside class="drawer" id="reportDrawer" role="dialog" aria-modal="true" aria-labelledby="rp-h" hidden>
+  <div class="panel-h"><h2 id="rp-h">Save a Word report</h2><button type="button" class="btn small" id="reportClose">Close</button></div>
+  <p class="rpintro">Builds a .docx in the Network Right report style. Pick the rooms and doors, then choose a report type or fine-tune every section under Report contents.</p>
+  <div class="rpform">
+    <label>Company name<input type="text" id="rpClient" autocomplete="organization" placeholder="Acme Corp"></label>
+    <label>Location<input type="text" id="rpSite" placeholder="Site address and floor"></label>
+    <label>Client contact<input type="text" id="rpPerson" placeholder="Name, title"></label>
+    <div class="rp2">
+      <label>Report date<input type="date" id="rpDate"></label>
+      <label>Prepared by<input type="text" id="rpBy"></label>
+    </div>
+    <label>Contact email<input type="email" id="rpEmail" autocomplete="email"></label>
+    <fieldset><legend>Conference rooms</legend>
+      <div id="rpRooms"></div>
+      <div class="rpall"><button type="button" class="btn small ghost" data-allrooms="1">Select all</button><button type="button" class="btn small ghost" data-allrooms="0">Clear all</button></div>
+    </fieldset>
+    <fieldset id="rpDoorsSet"><legend>Doors</legend>
+      <div id="rpDoors"></div>
+      <div class="rpall"><button type="button" class="btn small ghost" data-alldoors="1">Select all</button><button type="button" class="btn small ghost" data-alldoors="0">Clear all</button></div>
+    </fieldset>
+    <fieldset id="rpNetSet"><legend>Network</legend>
+      <label class="check"><input type="checkbox" id="rpNet"><span>UniFi network, home runs and Wi-Fi survey<span class="hint" id="rpNetHint">Loading…</span></span></label>
+    </fieldset>
+    <fieldset id="rpOpts"><legend>Report contents</legend>
+      <div class="seg rpseg" id="rpPreset" role="group" aria-label="Report type"></div>
+      <p class="hint" id="rpPresetHint"></p>
+      <div id="rpTree"></div>
+    </fieldset>
+  </div>
+  <div class="rpfoot"><p class="rpsum" id="rpSum" aria-live="polite"></p><button type="button" class="btn primary" id="reportGo">Save .docx report</button>
+  <p class="rpmsg" id="reportMsg" role="status" aria-live="polite"></p></div>
+</aside>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="gl-h" hidden>
+  <div class="panel-h"><h2 id="gl-h">Glossary</h2><button type="button" class="btn small" id="drawerClose">Close</button></div>
+  <dl class="gloss">
+    <dt>Appliance mode</dt><dd>The video bar runs the meeting software itself (Teams Rooms on Android or Google Meet on Android). No separate computer; the controller pairs over the network.</dd>
+    <dt>Compute (PC mode)</dt><dd>A small dedicated computer runs the meeting software, such as a Lenovo ThinkSmart Core for Teams Rooms on Windows or a Google Meet Compute system. The video bar connects to it by USB.</dd>
+    <dt>Tap and Tap IP</dt><dd>Logitech’s 10.1-inch touch controllers. Tap connects to a compute over a USB or Cat5e kit; Tap IP connects over the network and takes PoE, for appliance-mode rooms.</dd>
+    <dt>Resource account</dt><dd>The room’s own Microsoft 365 account that the Teams Room signs in with, so it can be booked and join meetings. Google Meet rooms are enrolled in the Google Admin console instead.</dd>
+    <dt>Image height and the 4/6 rule</dt><dd>For a 16:9 screen, image height is about 0.49 × the diagonal. A common rule keeps the farthest viewer within 6 × image height for general content, or 4 × for detailed content like spreadsheets.</dd>
+    <dt>VESA pattern</dt><dd>The spacing of the threaded holes on the back of a display, in millimeters, such as 400 × 400. The mount or cart has to match it or use an adapter.</dd>
+    <dt>Stud, backing, blocking</dt><dd>Studs are the vertical framing inside a drywall wall. Backing or blocking is wood or steel added between studs so a mount has something solid to fasten to.</dd>
+    <dt>SnapToggle (1/4-20)</dt><dd>Toggler’s heavy-duty toggle bolt for hollow walls. Drill a 1/2 in hole, fold the steel channel through it, and the channel locks flat behind the drywall. Needs an empty cavity (not a stud), so holes go between studs. Works in drywall and hollow block; plan on one quarter of the ultimate load.</dd><dt>Tapcon</dt><dd>A blue-coated concrete screw that cuts its own threads. The 1/4 in size uses a 3/16 in carbide bit. Good in concrete, solid brick and filled block; keep it out of mortar joints and away from edges.</dd><dt>Wedge and sleeve anchors</dt><dd>Expansion anchors for concrete and block. Wedge anchors go into solid concrete; sleeve anchors also suit block. Follow the anchor manufacturer’s hole size, depth and torque.</dd>
+    <dt>CMU</dt><dd>Concrete masonry unit: hollow concrete block. Fasten into the solid face or a grout-filled cell, never into a mortar joint.</dd>
+    <dt>PoE</dt><dd>Power over Ethernet: the network switch powers the device through its network cable, as with Tap IP and Tap Scheduler.</dd>
+    <dt>HDMI-CEC</dt><dd>Lets the room system wake the display and switch inputs over HDMI. Turn it on in the display’s settings so the screen wakes when a meeting starts.</dd>
+    <dt>Active HDMI, AOC</dt><dd>HDMI cables with built-in signal boosting (active) or fiber inside (active optical cable) for runs beyond about 15 ft. They work in one direction only.</dd>
+    <dt>Bezel</dt><dd>The frame around the screen. Heights in this guide are to the outside edge of the bezel (top bezel, bottom bezel), which is what you see and measure on the wall.</dd>
+    <dt>Wall plate</dt><dd>The part of the mount fastened to the wall. The display’s brackets hang on it. Its center height sets where the display ends up.</dd>
+    <dt>Full-motion mount</dt><dd>An articulating arm that lets the display extend, swivel and tilt, such as the Mounting Dream MD2298. It puts more leverage on the wall than a fixed or tilt mount.</dd>
+    <dt>Calendar resource</dt><dd>The room’s own calendar: a Google Workspace resource or a Microsoft 365 room mailbox. People invite it to book the room, and the room system and scheduling panel read it.</dd>
+    <dt>Zoom Rooms Scheduling Display</dt><dd>A panel outside the room, such as a Logitech Tap Scheduler, paired with a Zoom Room to show and book its calendar.</dd>
+    <dt>Rally Bar 2</dt><dd>Logitech’s October 2026 video bar that replaces Rally Bar and Rally Bar Mini, paired with Tap IP 2, Tap Scheduler 2 and Rally Mic Pod 2.</dd>
+    <dt>RightSight</dt><dd>Logitech’s automatic camera framing, which keeps the people in the room centered and sized in the picture.</dd>
+  </dl>
+  <p class="foot" style="margin-top:16px">Product details and room sizes come from Logitech’s and Heckler’s published material; weights, VESA patterns and cable limits are typical planning values. Always confirm with the product’s spec sheet and the mount manufacturer’s instructions.</p>
+</aside>
+
+<!-- build:app doorsSrc apps/doors.html -->
+<!-- build:app netSrc apps/network.html -->
+<script>
+(async function(){
+<!-- build:rooms -->
+})();
+</script>
+
+</body>
+</html>

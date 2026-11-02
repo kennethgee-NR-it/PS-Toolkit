@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UniFi Access Wiring Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#E8ECEF; --panel:#F8FAFB; --ink:#17212A; --muted:#566370; --line:#C7D0D6;
+  --pcb:#DCE3E8; --term:#2F7A4A; --term-ink:#FFFFFF;
+  --plus:#C8302C; --minus:#1E252B; --sig:#2C6FB7; --aux:#C97B12; --eth:#7A8793;
+  --live:#F0A500; --case:#7E8A94;
+  --wall:#E3E7EA; --ceil:#D5DBE0; --door:#B7C1CA; --frame:#7D8A95; --metal:#A7B1BA; --beyond:#F5F8FA; --amber:#F2A400; --ok:#2E7D4F; --warn:#A86A10; --bad:#BE3328;
+  --ok-tint:#E3F1E8; --warn-tint:#FBF0DC; --bad-tint:#F9E2DF;
+  --sans:"Barlow", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --cond:"Barlow Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#11171C; --panel:#182128; --ink:#E5EBEF; --muted:#9AA8B3; --line:#2D3942;
+    --pcb:#212C34; --term:#3E9A60; --term-ink:#FFFFFF;
+    --plus:#E4554E; --minus:#AEB8C0; --sig:#5C9DE2; --aux:#E39A35; --eth:#8794A0;
+    --live:#FFB81F; --ok:#4DB57A; --warn:#E0A43A; --bad:#EE6A5E;
+    --ok-tint:#183326; --warn-tint:#33280F; --bad-tint:#3A1D1A; --case:#8E9AA4;
+    --wall:#20292F; --ceil:#1A2228; --door:#3B4852; --frame:#6B7882; --metal:#8C98A2; --beyond:#0E1317; --amber:#FFB81F;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#11171C; --panel:#182128; --ink:#E5EBEF; --muted:#9AA8B3; --line:#2D3942;
+  --pcb:#212C34; --term:#3E9A60; --term-ink:#FFFFFF;
+  --plus:#E4554E; --minus:#AEB8C0; --sig:#5C9DE2; --aux:#E39A35; --eth:#8794A0;
+  --live:#FFB81F; --ok:#4DB57A; --warn:#E0A43A; --bad:#EE6A5E;
+  --ok-tint:#183326; --warn-tint:#33280F; --bad-tint:#3A1D1A; --case:#8E9AA4;
+  --wall:#20292F; --ceil:#1A2228; --door:#3B4852; --frame:#6B7882; --metal:#8C98A2; --beyond:#0E1317; --amber:#FFB81F;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+
+
+
+@media (max-width:980px){}
+
+label.row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:7px 0;font-size:14px}
+label.check{display:flex;gap:9px;align-items:flex-start;margin:7px 0;font-size:14px;cursor:pointer}
+label.check input{margin-top:3px;accent-color:var(--term)}
+label.check.disabled{color:var(--muted);cursor:not-allowed}
+.hint{display:block;color:var(--muted);font-size:12.5px;line-height:1.35}
+select,input[type=number]{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 7px;max-width:170px}
+input[type=number]{width:84px}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;margin:4px 0 8px}
+.seg button{flex:1;font:inherit;font-size:13.5px;padding:6px 4px;border:0;background:transparent;color:var(--ink);cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--term);color:var(--term-ink)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--sig);outline-offset:2px}
+
+
+
+
+
+
+
+
+.schem{overflow-x:auto;padding:4px 0 0}
+.schem svg{display:block;width:100%;min-width:720px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+
+@media (max-width:760px){}
+.state{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.state .big{font-family:var(--cond);font-weight:600;font-size:30px;line-height:1}
+.pill{font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px}
+.pill.ok{background:var(--ok-tint);color:var(--ok)}
+.pill.warn{background:var(--warn-tint);color:var(--warn)}
+.pill.bad{background:var(--bad-tint);color:var(--bad)}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0 0 12px;font-size:14px}
+dl.kv dt{color:var(--muted)}
+dl.kv dd{margin:0;font-variant-numeric:tabular-nums}
+.explain{margin:0;font-size:14.5px;max-width:70ch}
+.explain p{margin:0 0 7px}
+ul.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+ul.checks li{display:grid;grid-template-columns:22px 1fr;gap:8px;font-size:14px;line-height:1.4}
+ul.checks .ic{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;margin-top:1px}
+ul.checks .ok .ic{background:var(--ok-tint);color:var(--ok)}
+ul.checks .warn .ic{background:var(--warn-tint);color:var(--warn)}
+ul.checks .bad .ic{background:var(--bad-tint);color:var(--bad)}
+ul.checks .info .ic{background:var(--bg);color:var(--muted)}
+ul.checks b{font-weight:600}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--cond);font-weight:600;font-size:15px;color:var(--muted)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.learn{background:var(--bg);border-left:3px solid var(--sig);border-radius:6px;padding:8px 11px;font-size:13px;line-height:1.45;margin:4px 0 8px}
+.learn b{font-weight:600}
+body:not(.learning) .learn, body:not(.learning) .why, body:not(.learning) .learn-only{display:none}
+.why{display:block;color:var(--muted);font-size:12.5px;margin-top:3px}
+
+
+
+
+
+
+.pathline{font-size:13.5px;background:var(--bg);border-radius:6px;padding:8px 11px;margin:0 0 12px;line-height:1.6}
+.pathline .lab{display:block;color:var(--muted);font-size:12.5px}
+.pathline .open{color:var(--bad);font-weight:600}
+dl.gloss{display:grid;grid-template-columns:minmax(120px,max-content) 1fr;gap:8px 18px;margin:0;font-size:14px}
+dl.gloss dt{font-weight:600}
+dl.gloss dd{margin:0;max-width:75ch}
+@media (max-width:600px){dl.gloss{grid-template-columns:1fr}dl.gloss dd{margin-bottom:6px}}
+.subopts{margin:2px 0 10px 26px;padding-left:10px;border-left:2px solid var(--line)}
+.subopts select{max-width:150px}
+.equip td:first-child{font-weight:600;white-space:nowrap}
+.equip .pick{font-weight:600;color:var(--term)}
+.svsum{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.svsum .big{font-family:var(--cond);font-weight:600;font-size:20px}
+.svsum ul{margin:4px 0 0;padding-left:18px;flex-basis:100%}
+.svgroup h3{font-family:var(--cond);font-weight:600;font-size:17px;margin:14px 0 6px}
+.svitem{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;border-top:1px solid var(--line);padding:10px 0}
+.svitem .q{font-weight:600;font-size:14.5px}
+.svitem .d{font-size:13.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+.svitem .d b{color:var(--ink);font-weight:600}
+.svitem.no{background:var(--bad-tint);border-radius:6px;padding:10px;margin:2px 0}
+.svbtns{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;align-self:start}
+.svbtns button{font:inherit;font-size:13px;padding:6px 10px;border:0;border-right:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.svbtns button:last-child{border-right:0}
+.svbtns button[aria-pressed="true"][data-v="ok"]{background:var(--ok);color:#fff}
+.svbtns button[aria-pressed="true"][data-v="no"]{background:var(--bad);color:#fff}
+.svbtns button[aria-pressed="true"][data-v="na"]{background:var(--muted);color:var(--panel)}
+@media (max-width:640px){.svitem{grid-template-columns:1fr}}
+.dv-lbl{font-family:var(--cond);font-size:11.5px;fill:var(--ink)}
+.dv-lead{stroke:var(--muted);stroke-width:.8;fill:none}
+.dv-title{font-family:var(--cond);font-weight:600;font-size:15px;fill:var(--ink)}
+.flash{animation:flash .8s steps(2,start) infinite}
+@keyframes flash{to{opacity:.25}}
+@media (prefers-reduced-motion: reduce){.flash{animation:none}}
+.gsub{font-family:var(--cond);font-weight:600;font-size:17px;margin:16px 0 8px}
+ul.tools{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px 20px;font-size:14px}
+ul.tools b{font-weight:600}
+ol.steps{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px}
+ol.steps>li{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--bg)}
+ol.steps>li.done{opacity:.55}
+.step-h{display:flex;gap:10px;align-items:baseline}
+.step-h .num{font-family:var(--cond);font-weight:600;font-size:21px;color:var(--term);min-width:24px}
+.step-h h4{font-family:var(--cond);font-weight:600;font-size:18px;margin:0;flex:1}
+.step-h label{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;cursor:pointer}
+.step-h input{accent-color:var(--term)}
+.stepgrid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:4px 22px;margin-left:34px}
+@media (max-width:760px){.stepgrid{grid-template-columns:1fr;margin-left:0}}
+.sub{font-weight:600;font-size:13px;color:var(--muted);margin:8px 0 3px}
+ul.plain{margin:0;padding-left:18px}
+ul.plain li{margin:3px 0;font-size:14px}
+.expect{font-weight:600;color:var(--ok)}
+.foot{color:var(--muted);font-size:12.5px;margin-top:6px;max-width:90ch}
+/* svg */
+.w{fill:none;stroke-width:2.8;stroke-linejoin:round;stroke-linecap:round}
+.case{fill:none;stroke:var(--case);stroke-width:5.2;stroke-linejoin:round;stroke-linecap:round}
+.w.red{stroke:#D3302B} .w.blk{stroke:#1E1E1E} .w.grn{stroke:#2D8A3E} .w.wht{stroke:#F6F6F2}
+.w.eth{stroke:var(--eth);stroke-width:3;stroke-dasharray:1 5}
+.flow{fill:none;stroke:var(--live);stroke-width:1.8;stroke-dasharray:6 8;stroke-linecap:round;animation:flow .9s linear infinite}
+g.idle{opacity:.4}
+@keyframes flow{to{stroke-dashoffset:-16}}
+@media (prefers-reduced-motion: reduce){.flow{animation:none;stroke-dasharray:2 4}}
+.sw.wht{background:#F6F6F2;box-shadow:inset 0 0 0 1px var(--muted)} .sw.red{background:#D3302B} .sw.blk{background:#1E1E1E;box-shadow:inset 0 0 0 1px var(--muted)} .sw.grn{background:#2D8A3E} .sw.eth{background:var(--eth)}
+.colors{white-space:nowrap}
+.box{fill:var(--panel);stroke:var(--muted);stroke-width:1.25}
+.hubbox{fill:var(--pcb);stroke:var(--muted);stroke-width:1.5}
+.t{fill:var(--ink);font-family:var(--cond);font-size:13px}
+.t.b{font-weight:600;font-size:15px}
+.t.s{font-size:11.5px;fill:var(--muted)}
+.t.m{text-anchor:middle}
+.term{fill:var(--term)}
+.screw{fill:var(--term-ink);opacity:.85}
+.lever{stroke:var(--ink);stroke-width:2.2;stroke-linecap:round}
+.dot{fill:var(--ink)}
+.hot{stroke:var(--bad);stroke-width:2.5}
+.okfill{fill:var(--ok)} .badfill{fill:var(--bad)} .warnfill{fill:var(--warn)}
+
+/* ===== app shell ===== */
+.skip{position:absolute;left:-999px;top:8px;background:var(--ink);color:var(--panel);padding:8px 12px;border-radius:6px;z-index:50}
+.skip:focus{left:12px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--panel);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:21;background:var(--panel)}
+.appbar{display:flex;align-items:center;gap:14px;padding:10px 24px;max-width:1440px;margin:0 auto}
+.appbar h1{font-family:var(--cond);font-weight:600;font-size:22px;margin:0;white-space:nowrap}
+.appbar .door{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);margin-left:8px}
+.appbar .door input{font:inherit;font-weight:600;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;width:180px}
+.appbar .spacer{flex:1}
+.btn{font:inherit;font-size:14px;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;min-height:38px;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--term);border-color:var(--term);color:var(--term-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);background:var(--bg)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+[hidden]{display:none!important}
+.btn[aria-pressed="true"].tog{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.btn.small{font-size:13px;padding:5px 10px;min-height:30px}
+.stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));max-width:1440px;margin:0 auto;padding:0 24px;gap:6px}
+.stage{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;column-gap:10px;align-items:center;padding:10px 12px 12px;border-bottom:3px solid transparent;border-radius:8px 8px 0 0}
+.stage:hover{background:var(--bg)}
+.stage:focus-visible{outline:2px solid var(--sig);outline-offset:-2px}
+.stage .n{grid-row:1/3;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--cond);font-weight:600;font-size:17px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.stage .tl{font-family:var(--cond);font-weight:600;font-size:18px;line-height:1.1}
+.stage .ts{font-size:12.5px;color:var(--muted);grid-column:2}
+.stage .badge{grid-row:1/3;grid-column:3;font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--bg);color:var(--muted);white-space:nowrap}
+.stage .badge.bad{background:var(--bad-tint);color:var(--bad)} .stage .badge.warn{background:var(--warn-tint);color:var(--warn)} .stage .badge.ok{background:var(--ok-tint);color:var(--ok)}
+.stage[aria-selected="true"]{border-bottom-color:var(--term)}
+.stage[aria-selected="true"] .n{background:var(--term);border-color:var(--term);color:var(--term-ink)}
+.strip{max-width:1440px;margin:0 auto;padding:10px 24px 0;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;font-size:13.5px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--ink)}
+.chip b{font-weight:600;color:var(--muted);font-weight:500}
+button.chip{font:inherit;font-size:13.5px;cursor:pointer}
+.chip.bad{background:var(--bad-tint);border-color:transparent;color:var(--bad);font-weight:600}
+.chip.ok{background:var(--ok-tint);border-color:transparent;color:var(--ok);font-weight:600}
+main{max-width:1440px;margin:0 auto;padding:14px 24px 48px}
+[role="tabpanel"][hidden]{display:none}
+.intro{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:4px 0 14px}
+.intro h2{font-family:var(--cond);font-weight:600;font-size:28px;margin:0;line-height:1.1}
+.intro p{margin:4px 0 0;color:var(--muted);max-width:78ch}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.panel-h h3{font-family:var(--cond);font-weight:600;font-size:19px;margin:0}
+.next{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+/* design */
+.tpl{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.tpl button{all:unset;box-sizing:border-box;cursor:pointer;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-size:14px;line-height:1.3;display:flex;flex-direction:column;gap:4px}
+.tpl button:hover{border-color:var(--muted)}
+.tpl button:focus-visible{outline:2px solid var(--sig);outline-offset:2px}
+.tpl button .k{font-size:11.5px;font-weight:600;letter-spacing:.04em;color:var(--term)}
+.tpl button.mistake .k{color:var(--bad)}
+.tpl button[aria-pressed="true"]{border-color:var(--term);box-shadow:inset 0 0 0 1px var(--term);background:var(--ok-tint)}
+.tpl button.mistake[aria-pressed="true"]{border-color:var(--bad);box-shadow:inset 0 0 0 1px var(--bad);background:var(--bad-tint)}
+details.tplwrap>summary{cursor:pointer;font-family:var(--cond);font-weight:600;font-size:19px;list-style:none;display:flex;align-items:center;gap:8px}
+details.tplwrap>summary::-webkit-details-marker{display:none}
+details.tplwrap>summary::before{content:"▸";color:var(--muted);transition:transform .15s}
+details.tplwrap[open]>summary::before{transform:rotate(90deg)}
+.note{margin:10px 0 0;font-size:14px;background:var(--bg);border-left:3px solid var(--term);padding:9px 12px;border-radius:6px}
+.note.mistake{border-left-color:var(--bad)}
+.design{display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start;margin-top:14px}
+.form{padding:4px 0}
+.preview{display:flex;flex-direction:column;gap:16px;position:sticky;top:150px}
+@media (max-width:1100px){.design{grid-template-columns:1fr}.preview{position:static}}
+details.acc{border-bottom:1px solid var(--line);padding:0 16px}
+details.acc:last-child{border-bottom:0}
+details.acc>summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:13px 0;align-items:center}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary .h{font-family:var(--cond);font-weight:600;font-size:18px}
+details.acc>summary .v{grid-column:1;font-size:13px;color:var(--muted)}
+details.acc>summary::after{content:"▾";grid-row:1/3;grid-column:2;color:var(--muted);transition:transform .15s}
+details.acc:not([open])>summary::after{transform:rotate(-90deg)}
+details.acc>summary:focus-visible{outline:2px solid var(--sig);outline-offset:2px;border-radius:4px}
+details.acc .body{padding:0 0 14px}
+.checks .fix{margin-top:6px}
+ul.checks li .btn{font-size:12.5px;padding:3px 9px;min-height:26px;margin-top:5px}
+.filter{display:flex;gap:6px;flex-wrap:wrap}
+/* simulate */
+.sim{display:grid;grid-template-columns:260px minmax(0,1fr) 340px;gap:16px;align-items:start}
+@media (max-width:1260px){.sim{grid-template-columns:240px minmax(0,1fr)}.sim .statuscol{grid-column:1/-1}}
+@media (max-width:860px){.sim{grid-template-columns:1fr}}
+.scnlist{display:flex;flex-direction:column;gap:4px}
+.scnlist button{all:unset;box-sizing:border-box;cursor:pointer;padding:8px 10px;border-radius:8px;display:flex;flex-direction:column;gap:1px;border:1px solid transparent}
+.scnlist button .a{font-weight:600;font-size:14.5px}
+.scnlist button .b{font-size:12.5px;color:var(--muted);line-height:1.35}
+.scnlist button:hover{background:var(--bg)}
+.scnlist button:focus-visible{outline:2px solid var(--sig)}
+.scnlist button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.scnlist button[aria-pressed="true"] .b{color:var(--line)}
+.scnlist button:disabled{opacity:.42;cursor:not-allowed}
+.scngroup{font-size:12px;font-weight:600;letter-spacing:.05em;color:var(--muted);margin:10px 10px 2px}
+.statuscol{position:sticky;top:150px}
+@media (max-width:1260px){.statuscol{position:static}}
+/* survey */
+.progress{height:8px;border-radius:99px;background:var(--bg);overflow:hidden;flex-basis:100%}
+.progress i{display:block;height:100%;background:var(--term);border-radius:99px}
+/* install */
+.subtabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
+.subtab{all:unset;cursor:pointer;padding:9px 14px;font-weight:600;font-size:14.5px;border-bottom:3px solid transparent;color:var(--muted)}
+.subtab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--term)}
+.subtab:focus-visible{outline:2px solid var(--sig)}
+ol.steps>li.done .stepgrid{display:none}
+ol.steps>li.done{opacity:.7}
+ol.steps>li.current{border-color:var(--term);box-shadow:inset 3px 0 0 var(--term);background:var(--panel)}
+.meas{font:inherit;font-size:13.5px;width:90px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+/* drawer */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--panel);border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(0,0,0,.18);z-index:40;padding:calc(env(safe-area-inset-top,0px) + 16px) 20px calc(env(safe-area-inset-bottom,0px) + 20px);overflow:auto}
+.drawer[hidden]{display:none}
+.drawer h2{font-family:var(--cond);font-weight:600;font-size:24px;margin:0}
+.scrim{position:fixed;inset:0;background:rgba(10,15,20,.35);z-index:39}
+.scrim[hidden]{display:none}
+/* svg containers */
+.canvas svg{display:block;width:100%;height:auto}
+.canvas{overflow-x:auto}
+.canvas.wide svg{min-width:680px}
+.learn{font-size:13.5px}
+@media (max-width:760px){.appbar{flex-wrap:wrap;padding:10px 14px}.stages{grid-template-columns:repeat(4,minmax(0,1fr));padding:0 8px}.stage .ts,.stage .badge{display:none}main,.strip{padding-left:14px;padding-right:14px}}
+
+.appbar .door select{font:inherit;font-weight:600;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;max-width:220px}
+.ddintro{color:var(--muted);font-size:14px;margin:8px 0 14px}
+.roomlist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.roomlist li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.roomlist li.cur{border-color:var(--term);box-shadow:inset 3px 0 0 var(--term)}
+.roomlist input{font:inherit;font-weight:600;font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);min-width:0;width:100%}
+.roomlist .rmeta{grid-column:1;font-size:12.5px;color:var(--muted)}
+.roomlist .rbtns{grid-column:2;grid-row:1/3;display:flex;gap:4px;align-items:center}
+.roomadd{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.appbar{flex-wrap:wrap;row-gap:8px}
+
+/* ===== UX pass ===== */
+.btn.switch{gap:9px}
+.btn.switch .knob{flex:none;width:30px;height:18px;border-radius:99px;background:var(--line);position:relative;transition:background .15s}
+.btn.switch .knob::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.btn.switch[aria-pressed="true"] .knob{background:var(--term)}
+.btn.switch[aria-pressed="true"] .knob::after{transform:translateX(12px)}
+@media (prefers-reduced-motion: reduce){.btn.switch .knob,.btn.switch .knob::after{transition:none}}
+label.row:has(select){flex-direction:column;align-items:stretch;gap:4px}
+label.row:has(select) select{max-width:none;width:100%}
+.panel-h{flex-wrap:wrap}
+#viewSeg{width:auto!important;flex:0 1 220px}
+.seg button{line-height:1.25}
+.design{grid-template-columns:400px minmax(0,1fr)}
+.design>*,.preview>*{min-width:0}
+@media (max-width:1100px){.design{grid-template-columns:minmax(0,1fr)}.preview{display:contents}#checksPanel{order:-1}}
+#checksPanel{scroll-margin-top:calc(env(safe-area-inset-top,0px) + 168px)}
+#checksH:focus{outline:none}
+.fixmsg{margin:0 0 10px;font-size:13.5px;color:var(--ok);font-weight:600}
+.fixmsg:empty{display:none}
+.subtabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.subtabs::-webkit-scrollbar{display:none}
+.subtab{white-space:nowrap}
+@media (pointer:coarse){.seg button,.svbtns button,.subtab,.tpl button,.scnlist button{min-height:44px}}
+@media (max-width:760px){
+  .top{position:static}
+  .appbar{gap:8px;padding:10px 14px}
+  .appbar h1{font-size:19px;flex:1 1 auto}
+  .appbar .spacer{display:none}
+  .appbar .door{order:5;flex:1 1 100%;margin:0}
+  .appbar .door select{flex:1;max-width:none}
+  .appbar .btn{min-height:36px;padding:6px 10px;font-size:13px}
+  .stages{position:fixed;left:0;right:0;bottom:0;z-index:30;max-width:none;gap:0;padding:0 4px env(safe-area-inset-bottom,0px);background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.08)}
+  .stage{grid-template-columns:1fr;grid-template-rows:auto auto;justify-items:center;row-gap:3px;column-gap:0;padding:8px 2px 9px;border-radius:0;border-bottom:0;border-top:3px solid transparent;min-width:0}
+  .stage[aria-selected="true"]{border-top-color:var(--term)}
+  .stage .n{grid-row:1;width:26px;height:26px;font-size:15px;position:relative}
+  .stage .tl{font-size:14.5px}
+  .stage:has(.badge.bad) .n::after,.stage:has(.badge.warn) .n::after{content:"";position:absolute;top:-3px;right:-4px;width:10px;height:10px;border-radius:50%;background:var(--bad);border:2px solid var(--panel)}
+  .stage:has(.badge.warn) .n::after{background:var(--warn)}
+  body{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
+  .strip{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+  .strip::-webkit-scrollbar{display:none}
+  .chip{white-space:nowrap;flex:none}
+  .intro h2{font-size:24px}
+  #checksPanel{scroll-margin-top:12px}
+  .tpl{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}
+  .tpl button{flex:0 0 72%;scroll-snap-align:start}
+  .scnlist{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:6px;scroll-snap-type:x proximity}
+  .scnlist .scngroup{display:none}
+  .scnlist button{flex:0 0 auto;max-width:220px;border:1px solid var(--line);scroll-snap-align:start}
+  .scnlist button .b{display:none}
+  .scnlist button:disabled{display:none}
+}
+@media print{.stages{display:none!important}}
+</style>
+</head>
+<body class="learning">
+<a class="skip" href="#main">Skip to content</a>
+<div class="top">
+  <div class="appbar">
+    <h1>Access wiring simulator</h1>
+    <label class="door">Door <select id="doorSel" aria-label="Current door"></select></label><input id="doorName" type="hidden" value="Door 1">
+    <button type="button" class="btn" id="doorsBtn" aria-haspopup="dialog">Doors</button>
+    <span class="spacer"></span>
+    <button type="button" class="btn switch" id="learnToggle" aria-pressed="true"><span class="knob" aria-hidden="true"></span>Explanations</button>
+    <button type="button" class="btn" id="reportBtn" aria-haspopup="dialog" hidden>Save report</button>
+    <button type="button" class="btn" id="helpBtn" aria-haspopup="dialog">Glossary</button>
+    <button type="button" class="btn ghost" id="resetBtn" title="Clears this door’s design, survey, install progress and readings">Start over</button>
+  </div>
+  <div class="stages" role="tablist" aria-label="Job stages">
+    <button class="stage" role="tab" id="t-design" data-tab="design" aria-controls="p-design"><span class="n">1</span><span class="tl">Design</span><span class="ts">Hardware and wiring</span><span class="badge" id="b-design"></span></button>
+    <button class="stage" role="tab" id="t-simulate" data-tab="simulate" aria-controls="p-simulate"><span class="n">2</span><span class="tl">Simulate</span><span class="ts">Run scenarios</span><span class="badge" id="b-simulate"></span></button>
+    <button class="stage" role="tab" id="t-survey" data-tab="survey" aria-controls="p-survey"><span class="n">3</span><span class="tl">Survey</span><span class="ts">Is the site ready?</span><span class="badge" id="b-survey"></span></button>
+    <button class="stage" role="tab" id="t-install" data-tab="install" aria-controls="p-install"><span class="n">4</span><span class="tl">Install</span><span class="ts">Build and sign off</span><span class="badge" id="b-install"></span></button>
+  </div>
+</div>
+<div class="strip" id="strip" aria-label="Door summary"></div>
+<main id="main">
+
+<section role="tabpanel" id="p-design" aria-labelledby="t-design" tabindex="-1">
+  <div class="intro"><div><h2>Design the door</h2><p>Start from a template or build from scratch. Every change updates the drawing and the checks on the right, so you can see what’s wrong before anything is ordered.</p></div></div>
+  <div class="panel">
+    <details class="tplwrap" id="tplwrap"><summary>Start from a template</summary>
+      <div class="tpl" id="presets" style="margin-top:12px"></div>
+    </details>
+    <p class="note" id="presetNote" hidden></p>
+  </div>
+  <div class="design">
+    <div class="panel form" id="controls" aria-label="Door configuration"></div>
+    <div class="preview">
+      <div class="panel" id="checksPanel">
+        <div class="panel-h"><h3 id="checksH" tabindex="-1">Best-practice checks</h3><button type="button" class="btn small primary" id="fixAll">Fix automatically</button></div>
+        <p class="fixmsg" id="fixMsg" role="status" aria-live="polite"></p>
+        <div class="filter" id="ckFilter" role="group" aria-label="Show checks"></div>
+        <ul class="checks" id="checks" style="margin-top:10px"></ul>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3>At the door</h3></div>
+        <div class="canvas" data-doorview></div>
+      </div>
+    </div>
+  </div>
+  <div class="next"><button type="button" class="btn primary" data-go="simulate">Next: simulate this door →</button></div>
+</section>
+
+<section role="tabpanel" id="p-simulate" aria-labelledby="t-simulate" tabindex="-1" hidden>
+  <div class="intro"><div><h2>Simulate</h2><p>Pick something that happens at the door. Watch where current flows, what the lock does, and what the hub reports. Anything surprising here is cheaper to fix now than on site.</p></div></div>
+  <div class="sim">
+    <div class="panel"><div class="scnlist" id="scenarios" role="group" aria-label="Scenarios"></div></div>
+    <div class="panel">
+      <div class="panel-h"><h3 id="viewTitle">Wiring</h3><div class="seg" role="group" aria-label="View" style="margin:0;width:220px" id="viewSeg"></div></div>
+      <div id="viewWiring">
+        <div class="canvas wide" id="schem"></div>
+        <div class="legend">
+          <span><span class="sw red"></span>Red: + power</span>
+          <span><span class="sw blk"></span>Black: − power, ground</span>
+          <span><span class="sw grn"></span>Green: signal +</span>
+          <span><span class="sw wht"></span>White: signal − (COM)</span>
+          <span><span class="sw eth"></span>Cat6, T568B</span>
+          <span><i style="background:var(--live)"></i>Moving amber: current flowing</span>
+        </div>
+        <p class="learn"><b>Reading the schematic.</b> The relay inside the hub is a switch. Its lever always touches COM and rests on NC; when the hub unlocks the door it swings to NO. In powered mode the hub feeds its own 12V into that lever; in dry mode the lever carries nothing until an external supply is wired to COM.</p>
+        <p class="learn"><b>Wire colors.</b> Red and black carry power, green and white carry signal. Each device gets its own cable, so colors repeat from cable to cable; label both ends. When a black conductor has to carry + (the return leg of a cable looped through a push-to-exit, for example), re-mark it with red tape at both ends.</p>
+      </div>
+      <div id="viewDoor" hidden><div class="canvas" data-doorview></div></div>
+    </div>
+    <div class="panel statuscol">
+      <div class="panel-h"><h3>Door status</h3></div>
+      <div id="status"></div>
+      <div class="explain" id="explain" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="next"><button type="button" class="btn" data-go="design">← Back to design</button><button type="button" class="btn primary" data-go="survey">Next: survey the site →</button></div>
+</section>
+
+<section role="tabpanel" id="p-survey" aria-labelledby="t-survey" tabindex="-1" hidden>
+  <div class="intro"><div><h2>Survey the site</h2><p>Walk the door before ordering parts or booking the install. Mark each check. Anything not ready is a blocker: fix it, or get it into the quote first. The list follows the hardware you chose in Design.</p></div></div>
+  <div class="panel">
+    <div id="svSummary" class="svsum" aria-live="polite"></div>
+    <div class="filter" id="svFilter" role="group" aria-label="Show survey items"></div>
+    <div id="survey"></div>
+  </div>
+  <div class="next"><button type="button" class="btn" data-go="simulate">← Back to simulate</button><button type="button" class="btn primary" data-go="install">Next: install →</button></div>
+</section>
+
+<section role="tabpanel" id="p-install" aria-labelledby="t-install" tabindex="-1" hidden>
+  <div class="intro"><div><h2>Install and test</h2><p>Everything needed on install day, built from your design: the parts, the wiring, step-by-step instructions with what to measure, and the acceptance test to sign off with the owner.</p></div></div>
+  <div class="panel">
+    <div class="subtabs" role="tablist" aria-label="Install sections" id="subtabs">
+      <button class="subtab" role="tab" data-sub="steps" aria-controls="s-steps">Steps</button>
+      <button class="subtab" role="tab" data-sub="equip" aria-controls="s-equip">Equipment</button>
+      <button class="subtab" role="tab" data-sub="wiring" aria-controls="s-wiring">Wiring list</button>
+      <button class="subtab" role="tab" data-sub="accept" aria-controls="s-accept">Acceptance test</button>
+    </div>
+    <div role="tabpanel" id="s-steps">
+      <div id="stepsProg" class="svsum"></div>
+      <details class="tplwrap"><summary>Tools and test equipment</summary><ul class="tools" id="tools" style="margin-top:10px"></ul></details>
+      <ol class="steps" id="steps" style="margin-top:14px"></ol>
+    </div>
+    <div role="tabpanel" id="s-equip" hidden>
+      <p class="learn">The highlighted product is the one picked in Design. The others are common alternatives of the same type; any of them wire the same way if their voltage and current match.</p>
+      <div class="tablewrap"><table class="equip" id="equip"></table></div>
+    </div>
+    <div role="tabpanel" id="s-wiring" hidden>
+      <div class="tablewrap"><table id="wiring"></table></div>
+      <p class="foot">Lock currents are typical values for planning; use the figure from the lock’s spec sheet. Voltage drop assumes copper conductors and the full lock current over the round trip. Code notes reflect common US practice (IBC/NFPA 101); the authority having jurisdiction has the final say.</p>
+    </div>
+    <div role="tabpanel" id="s-accept" hidden>
+      <p class="learn">Do these with the owner or their representative present. Measure DC volts at the lock’s terminals, red probe on lock +, and record the reading. Readings are saved on this laptop.</p>
+      <div class="tablewrap"><table id="accept"></table></div>
+    </div>
+  </div>
+  <div class="next"><button type="button" class="btn" data-go="survey">← Back to survey</button></div>
+</section>
+</main>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="doorsDrawer" role="dialog" aria-modal="true" aria-labelledby="dd-h" hidden>
+  <div class="panel-h"><h2 id="dd-h">Doors</h2><button type="button" class="btn small" id="doorsClose">Close</button></div>
+  <p class="ddintro">Each door keeps its own hardware, wiring, survey answers, install progress and acceptance readings.</p>
+  <ul class="roomlist" id="doorList"></ul>
+  <div class="roomadd"><button type="button" class="btn primary" id="doorNew">Add a door</button><button type="button" class="btn" id="doorDup">Duplicate current door</button></div>
+  <p class="hint" style="margin-top:8px">A duplicate copies the hardware and wiring only; its survey, install progress and readings start empty.</p>
+</aside>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="gl-h" hidden>
+  <div class="panel-h"><h2 id="gl-h">Glossary</h2><button type="button" class="btn small" id="drawerClose">Close</button></div>
+  <dl class="gloss">
+          <dt>Fail-safe</dt><dd>A lock that needs power to stay locked. If power is cut, it unlocks. Maglocks are always fail-safe. Used where people must be able to get out, such as egress doors.</dd>
+          <dt>Fail-secure</dt><dd>A lock that needs power to unlock. If power is cut, it stays locked. Most electric strikes are fail-secure; the inside lever still opens the door mechanically.</dd>
+          <dt>COM, NO, NC</dt><dd>The three terminals of a relay. COM is the common connection. NC (normally closed) is connected to COM at rest. NO (normally open) connects to COM only when the relay switches.</dd>
+          <dt>Powered (wet) output</dt><dd>The hub supplies the lock’s voltage itself: 12V DC, up to 1A. Fewest wires, but 12V locks only, and the lock loses power whenever the hub does.</dd>
+          <dt>Dry output</dt><dd>A relay with no power of its own; it only opens and closes a circuit. An external supply provides the voltage. Needed for 24V locks, high-current locks, and doors that must run on a battery-backed supply.</dd>
+          <dt>REX</dt><dd>Request to exit. A button or motion sensor on the secure side that tells the hub someone is leaving, so it unlocks without raising an alarm.</dd>
+          <dt>DPS</dt><dd>Door position sensor, a magnetic contact on the frame. It tells the hub whether the door is open, so it can report forced and held-open doors.</dd>
+          <dt>Fire alarm relay</dt><dd>A contact from the fire alarm panel wired in series with a fail-safe lock. It opens during an alarm and releases the door no matter what the hub is doing.</dd>
+          <dt>Voltage drop</dt><dd>The voltage lost in the cable on the way to the lock. Longer runs and thinner wire lose more. Aim for at least 90% of the lock’s rated voltage at the lock.</dd>
+          <dt>Diode or MOV</dt><dd>A small part across the lock’s terminals that absorbs the voltage spike a lock coil makes when it switches off. Protects the hub’s relay contacts.</dd>
+          <dt>AHJ</dt><dd>Authority having jurisdiction: the fire marshal or building inspector who decides what the code requires for a door.</dd>
+        </dl>
+  <p class="foot" style="margin-top:16px">Ratings quoted for the hub come from Ubiquiti’s published UA-Hub specs; confirm them for your hub model. Code notes reflect common US practice; the AHJ has the final say.</p>
+</aside>
+
+<script>
+(function(){
+  const LOCKS = {
+    mag:    {name:'Maglock, single door', short:'Maglock', noun:'maglock', safe:true,  amps:{12:0.50,24:0.25}, inductive:true},
+    mag2:   {name:'Maglocks, double door (pair)', short:'Double maglock', noun:'maglock pair', safe:true, amps:{12:1.00,24:0.50}, inductive:true},
+    fsafe:  {name:'Electric strike, fail-safe', short:'Fail-safe strike', noun:'strike', safe:true, amps:{12:0.45,24:0.25}, inductive:true},
+    fsecure:{name:'Electric strike, fail-secure', short:'Fail-secure strike', noun:'strike', safe:false, amps:{12:0.45,24:0.25}, inductive:true},
+    bolt:   {name:'Electric bolt, fail-safe', short:'Electric bolt', noun:'bolt', safe:true, amps:{12:0.90,24:0.45}, inductive:true},
+    mortise:{name:'Electrified mortise lock, fail-secure (EU)', short:'Electrified mortise', noun:'mortise lock', safe:false, amps:{12:0.30,24:0.15}, inductive:true, leaf:true},
+    mortiseEL:{name:'Electrified mortise lock, fail-safe (EL)', short:'Electrified mortise', noun:'mortise lock', safe:true, amps:{12:0.30,24:0.15}, inductive:true, leaf:true},
+    cyl:    {name:'Electrified cylindrical lock, fail-secure (EU)', short:'Electrified lever lock', noun:'lever lock', safe:false, amps:{12:0.40,24:0.20}, inductive:true, leaf:true},
+    cylEL:  {name:'Electrified cylindrical lock, fail-safe (EL)', short:'Electrified lever lock', noun:'lever lock', safe:true, amps:{12:0.40,24:0.20}, inductive:true, leaf:true},
+    elr:    {name:'Exit device, electric latch retraction', short:'Latch retraction', noun:'exit device', safe:false, amps:{12:1.80,24:0.90}, inductive:false, only24:true}
+  };
+  const BRANDS = {
+    mag:['UniFi UA-Lock-Magnetic-270kg / 540kg','Securitron (ASSA ABLOY) M32, M62, M680 series','SDC (Security Door Controls) 1500 series','Schlage (Allegion) M400 series maglocks, including M490 double','Rutherford Controls maglocks','Seco-Larm Enforcer maglocks'],
+    strike:['UniFi UACC-Lock-Strike 15mm / 8mm','HES (ASSA ABLOY) 1006, 5000, 9600 series','Von Duprin (Allegion) 6000 series','Adams Rite 7400 series','Folger Adam (ASSA ABLOY) 310 series','Trine Access Technology strikes'],
+    bolt:['UniFi UACC-Lock-Bolt-Safe','SDC (Security Door Controls) electric bolts','Securitron electric bolts','Locknetics (Allegion) electric bolts','Seco-Larm Enforcer electric bolts'],
+    mortise:['Schlage (Allegion) L9000 electrified, EU or EL, optional RX switch','Sargent 8200 electrified','Corbin Russwin ML2000 electrified','Best 45H electrified'],
+    cyl:['Schlage (Allegion) ND-Series electrified, EU or EL, optional RX switch','Sargent 10X Line electrified','Corbin Russwin CL3300 electrified','Best 9K electrified'],
+    elr:['Von Duprin (Allegion) QEL with PS900-series supply','Sargent 56- electric latch retraction','Precision (dormakaba) ELR exit devices'],
+    psu_basic:['Altronix AL400ULX / AL600ULX','LifeSafety Power FlexPower','Securitron BPS series','Seco-Larm Enforcer access control supplies'],
+    psu_acm:['Altronix AL600ULACM, or eFlow with ACM8','LifeSafety Power FlexPower with access control modules','Securitron AQD / AQL series'],
+    psu_mfr:['Schlage / Von Duprin (Allegion) PS900 series: PS902, PS904, PS914','Sargent and Corbin Russwin (ASSA ABLOY) exit device supplies'],
+    dps_recessed:['George Risk (GRI) recessed contacts','Schlage (Allegion) 679-05 series door position switches','Interlogix (Sentrol) 1078 series','Honeywell (Ademco) 940 series'],
+    dps_surface:['George Risk (GRI) surface contacts','Interlogix (Sentrol) surface contacts','Honeywell (Ademco) surface contacts'],
+    dps_wide:['George Risk (GRI) overhead door contacts','Interlogix (Sentrol) overhead door contacts'],
+    dps_hss:['Magnasphere high-security contacts','George Risk (GRI) balanced magnetic switches'],
+    dps_bond:['Bond sensor option on the maglock (for example Securitron MBS)'],
+    pir:['Bosch DS150i / DS160','Schlage (Allegion) SCAN II REX sensor','Securitron XMS','Kantech T.REX','Seco-Larm Enforcer REX sensors'],
+    btn:['Securitron EEB series','SDC (Security Door Controls) exit buttons','Camden Door Controls push buttons','Seco-Larm Enforcer exit buttons','Dortronics push buttons'],
+    mr:['Securitron EEB with timer','SDC push-to-exit buttons with timer','Camden Door Controls push buttons with timer'],
+    fire:['Notifier','Fire-Lite (Honeywell)','Edwards (EST)','Simplex','Silent Knight'],
+    op:['LCN (Allegion) Senior Swing / 4600 series','Norton (ASSA ABLOY) 5800 / 6000 series','ASSA ABLOY (Besam) SW200i','dormakaba ED100 / ED250','Stanley Access Technologies','Horton Automatics'],
+    act:['BEA push plates and wave switches','Camden Door Controls push plates and wave switches','Dortronics push plates'],
+    siren:['Seco-Larm Enforcer sirens and strobes','Amseco sirens and strobes','Honeywell (Ademco) sirens','Floyd Bell piezo alarms','SDC / Dortronics door prop alarms']
+  };
+  const lockBrandKey = () => ({mag:'mag',mag2:'mag',fsafe:'strike',fsecure:'strike',bolt:'bolt',mortise:'mortise',mortiseEL:'mortise',cyl:'cyl',cylEL:'cyl',elr:'elr'})[cfg.lock];
+  const PSU_TYPES = {basic:'Basic supply, single output', acm:'Supply with access control module (fused outputs, fire input)', mfr:'Lock manufacturer’s supply (exit devices)'};
+  const DPS_TYPES = {recessed:'Recessed door contact', surface:'Surface-mount contact', wide:'Wide-gap or overhead door contact', hss:'High-security balanced contact', bond:'Maglock bond sensor'};
+  const OP_TYPES = {low:'Low-energy swing (ANSI A156.19)', full:'Full-power swing (ANSI A156.10)', slide:'Sliding door operator'};
+  const SIREN_TYPES = {siren:{name:'Siren', amps:0.15}, strobe:{name:'Strobe', amps:0.10}, combo:{name:'Siren and strobe', amps:0.25}, prop:{name:'Door prop alarm', amps:0.05}};
+  const AUX_SIREN_MAX = 0.33;
+  const OHMS = {18:6.385, 20:10.15, 22:16.14}; // per 1000 ft
+  const HUBS = {mini:{name:'Door Hub Mini', model:'UA-Hub-Door-Mini', aux:false}, door:{name:'Door Hub', model:'UA-Hub-Door', aux:true}};
+  const SCN = [
+    ['idle','Idle, door secured'],['grant','Credential granted'],['rexButton','Exit button pressed'],['rexPir','Motion sensor detects exit'],
+    ['manual','Push-to-exit release pressed'],['schedule','Scheduled unlock'],['forced','Door forced open'],['held','Door held open'],
+    ['fire','Fire alarm'],['power','Building power loss'],['hubOff','Hub offline (PoE lost)']
+  ];
+  const defaults = () => ({hub:'mini', egress:true, lock:'fsecure', lockV:12, amps:0.45, supply:'hub', psuV:12, psuA:2, battery:false, contact:'NO',
+    gauge:18, run:50, suppression:true, rexButton:true, rexPir:false, pirDirect:false, manualRelease:false, fire:false, dps:true, operator:false, siren:false, switchUps:false,
+    lockBrand:0, psuType:'basic', psuBrand:0, dpsType:'recessed', dpsBrand:0, dpsForm:'NC', dpsTrigger:'NC', fireMethod:'series', fireBrand:0,
+    opType:'low', opBrand:0, opDelay:1.0, actBrand:0, sirenType:'combo', sirenAmps:0.25, sirenDrive:'aux', sirenBrand:0, pirBrand:0, btnBrand:0, mrBrand:0, mrRex:false, doors:'single'});
+  const KEY='ua-access-sim-v2';
+  let STORE={}; try{ STORE=JSON.parse(localStorage.getItem(KEY)||'{}')||{}; }catch(e){ STORE={}; }
+  const did=()=>'d'+Math.random().toString(36).slice(2,9);
+  let DOORS=Array.isArray(STORE.doors)&&STORE.doors.length?STORE.doors:null, ACTIVE=STORE.active;
+  if(DOORS){ const r=DOORS.find(x=>x.id===ACTIVE)||DOORS[0]; ACTIVE=r.id; Object.assign(STORE,{cfg:r.cfg||undefined,scenario:r.scenario,survey:r.survey,done:r.done,measured:r.measured,preset:r.preset==null?null:r.preset,doorName:r.name}); if(!r.cfg) delete STORE.cfg; }
+  else { DOORS=[{id:did(),name:STORE.doorName||'Door 1'}]; ACTIVE=DOORS[0].id; }
+  let cfg = Object.assign(defaults(), STORE.cfg||{});
+  let scenario = STORE.scenario || 'idle';
+  const UI = Object.assign({tab:'design', sub:'steps', view:'wiring', ckFilter:'issues', svFilter:'all', learn:true, open:{hub:true,lock:true,power:true}}, STORE.ui||{});
+  const measured = STORE.measured || {};
+  function syncActive(){ const r=DOORS.find(x=>x.id===ACTIVE); if(!r) return; const dn=document.getElementById('doorName'); r.name=(dn&&dn.value)||r.name; r.cfg=JSON.parse(JSON.stringify(cfg)); r.scenario=scenario;
+    r.survey=Object.assign({},survey); r.done=Object.assign({},done); r.measured=Object.assign({},measured); r.preset=preset; }
+  let saveT=null;
+  function writeNow(){ clearTimeout(saveT); saveT=null; try{ localStorage.setItem(KEY, (syncActive(),JSON.stringify({doors:DOORS,active:ACTIVE,ui:UI}))); }catch(e){} }
+  function save(){ clearTimeout(saveT); saveT=setTimeout(writeNow,200); }
+  window.addEventListener('pagehide',()=>{ if(saveT) writeNow(); }); document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden'&&saveT) writeNow(); });
+  const isSafe = () => LOCKS[cfg.lock].safe;
+  const recContact = () => isSafe() ? 'NC' : 'NO';
+  const fmt = (n,d=2) => (Math.round(n*Math.pow(10,d))/Math.pow(10,d)).toFixed(d);
+
+  // ---------- controls ----------
+  const C = document.getElementById('controls');
+  function seg(key, opts){
+    return `<div class="seg" role="group">${opts.map(([v,l])=>`<button type="button" data-seg="${key}" data-v="${v}" aria-pressed="${String(cfg[key])===String(v)}">${l}</button>`).join('')}</div>`;
+  }
+  function bsel(key, list, label='Example product'){
+    return `<label class="row">${label} <select data-sel="${key}">${list.map((b,i)=>`<option value="${i}" ${cfg[key]==i?'selected':''}>${b}</option>`).join('')}</select></label>`;
+  }
+  function osel(key, obj, label){
+    return `<label class="row">${label} <select data-sel="${key}">${Object.entries(obj).map(([k,v])=>`<option value="${k}" ${cfg[key]===k?'selected':''}>${typeof v==='string'?v:v.name}</option>`).join('')}</select></label>`;
+  }
+  const sub = html => `<div class="subopts">${html}</div>`;
+  function chk(key, label, hint, disabled){
+    return `<label class="check${disabled?' disabled':''}"><input type="checkbox" data-chk="${key}" ${cfg[key]&&!disabled?'checked':''} ${disabled?'disabled':''}><span>${label}${hint?`<span class="hint">${hint}</span>`:''}</span></label>`;
+  }
+  function renderControls(){
+    const aux = HUBS[cfg.hub].aux, safe = isSafe();
+    C.innerHTML = `
+      <fieldset><legend>Hub</legend>${seg('hub',[['mini','Door Hub Mini'],['door','Door Hub']])}
+        <span class="hint">${cfg.hub==='mini'?'G3 Starter Kit hub: one lock terminal, exit request and door position inputs, no AUX outputs.':'Two lock terminals (12V powered and dry), AUX outputs for a door operator and a siren or chime.'}</span>
+        ${chk('egress','Door is on an egress path','Turns on the code checks for free egress and fire release.')}
+        <p class="learn">The hub is the controller. It powers the reader, decides who gets in, and switches the lock with a relay.</p>
+      </fieldset>
+      <fieldset><legend>Lock</legend>
+        <p class="learn"><b>Fail-safe</b> locks need power to stay locked; <b>fail-secure</b> locks need power to unlock. That decides whether the lock goes on NC (powered at rest) or NO (powered only when unlocking).</p>
+        <label class="row">Type <select data-sel="lock">${Object.entries(LOCKS).map(([k,v])=>`<option value="${k}" ${cfg.lock===k?'selected':''}>${v.name}</option>`).join('')}</select></label>
+        ${bsel('lockBrand', BRANDS[lockBrandKey()])}
+        ${cfg.lock==='elr'?'<span class="hint">Latch retraction motors draw a high inrush current. Power them from the exit device maker’s supply.</span>':''}
+        <label class="row">Opening</label>${seg('doors',[['single','Single door'],['double','Pair of doors']])}
+        ${cfg.doors==='double'&&cfg.lock!=='mag2'?`<span class="hint">${cfg.lock==='mag'?'A pair needs a magnet on each leaf: choose the double-door maglock.':cfg.lock==='elr'?'Each leaf gets its own exit device, often vertical rod; both need latch retraction to unlock the pair.':'The lock goes on the active leaf; the inactive leaf is held by flush bolts or a mullion.'}</span>`:''}
+        <label class="row">Rated voltage</label>${seg('lockV',[[12,'12V DC'],[24,'24V DC']])}
+        <label class="row">Current draw <span><input type="number" step="0.05" min="0.05" max="3" data-num="amps" value="${cfg.amps}"> A</span></label>
+        <label class="row">Wire landed on hub ${seg('contact',[['NC','NC'],['NO','NO']]).replace('class="seg"','class="seg" style="width:120px;margin:0"')}</label>
+        <span class="hint">${safe?'Fail-safe: needs power to stay locked. Best practice is NC.':'Fail-secure: needs power to unlock. Best practice is NO.'}</span>
+        ${chk('suppression','Diode or MOV across the lock','Absorbs the voltage spike when an inductive lock switches off. Skip if the lock has one built in.')}
+      </fieldset>
+      <fieldset><legend>Lock power</legend>
+        ${seg('supply',[['hub','Powered (hub 12V)'],['psu','Dry + external PSU']])}
+        <p class="learn">${cfg.supply==='hub'
+          ?'<b>Powered mode.</b> The hub supplies 12V from its own PoE++ power. Lock + goes to NC or NO, lock − goes to COM, which acts as ground. Good for a single 12V lock under 1A.'
+          :'<b>Dry mode.</b> The relay is only a switch. The supply’s + goes to the hub’s dry COM, the relay passes it out on NC or NO to the lock’s +, and the lock’s − goes straight back to the supply’s −. Use it for 24V locks, anything over about 0.8A, or a battery-backed supply.'}</p>
+        ${cfg.supply==='psu'?`
+          <label class="row">PSU output</label>${seg('psuV',[[12,'12V DC'],[24,'24V DC']])}
+          <label class="row">PSU rating <select data-sel="psuA">${[1,2,3,4,6].map(a=>`<option value="${a}" ${cfg.psuA==a?'selected':''}>${a} A</option>`).join('')}</select></label>
+          ${osel('psuType', PSU_TYPES, 'Supply type')}
+          ${bsel('psuBrand', BRANDS['psu_'+cfg.psuType])}
+          ${chk('battery','PSU has battery backup')}
+        `:`<span class="hint">The hub’s powered terminal supplies 12V DC, up to 1A, from its own PoE++ input.</span>`}
+        ${chk('switchUps','PoE switch is on a UPS','Keeps the hub (and a hub-powered lock) running through a power cut.')}
+      </fieldset>
+      <fieldset><legend>Lock cable run</legend>
+        <p class="learn">Wire has resistance, so some voltage is lost on the way to the lock. Thinner wire (a higher AWG number) and longer runs lose more.</p>
+        <label class="row">Length, one way <span><input type="number" min="1" max="1000" step="5" data-num="run" value="${cfg.run}"> ft</span></label>
+        <label class="row">Gauge <select data-sel="gauge">${[18,20,22].map(g=>`<option value="${g}" ${cfg.gauge==g?'selected':''}>${g} AWG</option>`).join('')}</select></label>
+      </fieldset>
+      <fieldset><legend>Exit devices</legend>
+        <p class="learn">Exit devices let people leave from the secure side. Devices wired to the hub input unlock through the hub and log the exit. Devices wired in series with lock power release the lock directly, even if the hub is down, which codes usually require for maglocks.</p>
+        ${chk('rexButton','Exit button to hub input','Momentary NO button; the hub unlocks and logs the exit.')}
+        ${cfg.rexButton?sub(bsel('btnBrand', BRANDS.btn)):''}
+        ${chk('rexPir','Motion REX sensor to hub input','PIR relay NO contact to the exit request input.')}
+        ${cfg.rexPir?sub(bsel('pirBrand', BRANDS.pir)):''}
+        ${chk('pirDirect','Motion sensor also cuts lock power', 'PIR NC contact in series with the lock, so it releases even if the hub is down.', !(cfg.rexPir && safe))}
+        ${chk('manualRelease','Push-to-exit manual release','NC button in series with lock power, independent of the hub. Required with maglocks.', !safe)}
+        ${cfg.manualRelease&&safe?sub(bsel('mrBrand', BRANDS.mr)+chk('mrRex','Second contact signals the hub','A double-pole button: one contact cuts lock power, the other closes the exit request input so the hub logs an exit instead of a forced door.')):''}
+      </fieldset>
+      <fieldset><legend>Monitoring and outputs</legend>
+        <p class="learn">These let the hub watch the door and drive other equipment. The door sensor is what makes forced and held-open alarms possible.</p>
+        ${chk('dps','Door position sensor','Lets the hub detect forced and held-open doors.')}
+        ${cfg.dps?sub(osel('dpsType', (cfg.lock==='mag'||cfg.lock==='mag2')?DPS_TYPES:Object.fromEntries(Object.entries(DPS_TYPES).filter(([k])=>k!=='bond')), 'Sensor type')
+          + bsel('dpsBrand', BRANDS['dps_'+cfg.dpsType])
+          + `<label class="row">Contact used ${seg('dpsForm',[['NC','NC'],['NO','NO']]).replace('class="seg"','class="seg" style="width:110px;margin:0"')}</label>`
+          + `<label class="row">Access trigger setting ${seg('dpsTrigger',[['NC','Open-active'],['NO','Close-active']]).replace('class="seg"','class="seg" style="width:180px;margin:0"')}</label>`
+          + `<span class="hint">Use the NC contact (closed when the door is shut) with the open-active setting. The two must match or the hub reads the door backwards.</span>`):''}
+        ${chk('fire','Fire alarm release','The fire alarm panel releases fail-safe locks during an alarm.', !safe)}
+        ${cfg.fire&&safe?sub(`<label class="row">Method</label>${seg('fireMethod',[['series','Relay in lock circuit'],['psu','PSU fire input']])}`
+          + `<span class="hint">${cfg.fireMethod==='series'?'A fire panel relay contact (C to NC) breaks lock + directly.':'The fire panel relay opens the supply’s fire alarm input, and the supply drops every lock output at once. Needs dry mode and a supply with a fire input.'}</span>`
+          + bsel('fireBrand', BRANDS.fire, 'Fire panel')):''}
+        ${chk('operator','Automatic door operator','Dry AUX contact to the operator’s activation input.', !aux)}
+        ${cfg.operator&&aux?sub(osel('opType', OP_TYPES, 'Operator type') + bsel('opBrand', BRANDS.op)
+          + `<label class="row">Opening delay <span><input type="number" step="0.25" min="0" max="5" data-num0="opDelay" value="${cfg.opDelay}"> s</span></label>`
+          + bsel('actBrand', BRANDS.act, 'Push plates')):''}
+        ${chk('siren','Siren or strobe','Sounds on forced or held-open doors.', !aux)}
+        ${cfg.siren&&aux?sub(osel('sirenType', SIREN_TYPES, 'Device type') + bsel('sirenBrand', BRANDS.siren)
+          + `<label class="row">Current draw <span><input type="number" step="0.05" min="0.01" max="3" data-num="sirenAmps" value="${cfg.sirenAmps}"> A</span></label>`
+          + `<label class="row">Driven by</label>${seg('sirenDrive',[['aux','Hub AUX 12V'],['relay','Relay + PSU']])}`
+          + `<span class="hint">${cfg.sirenDrive==='aux'?'The hub’s siren output supplies 12V itself (the original UA-Hub was rated 0.33A). Check your hub’s guide.':'The hub’s siren output drives a 12V relay coil; the relay switches the external supply to a larger siren or strobe.'}</span>`):''}
+      </fieldset>
+    `;
+    // turn fieldsets into accordions with a one-line summary of their current values
+    const L=LOCKS[cfg.lock];
+    const SUMS = {
+      'Hub': `${HUBS[cfg.hub].name}${cfg.egress?', egress door':''}`,
+      'Lock': `${L.name}, ${cfg.lockV}V, ${cfg.doors==='double'?'pair':'single door'}`,
+      'Lock power': cfg.supply==='hub'?'Powered from the hub, 12V':`Dry relay, ${cfg.psuV}V supply, ${cfg.psuA} A${cfg.battery?', battery':''}`,
+      'Lock cable run': `${fmt(cfg.run,0)} ft of ${cfg.gauge} AWG`,
+      'Exit devices': [cfg.rexButton&&'exit button',cfg.rexPir&&'motion sensor',cfg.manualRelease&&safe&&'push-to-exit'].filter(Boolean).join(', ')||'None',
+      'Monitoring and outputs': [cfg.dps&&'door sensor',cfg.fire&&safe&&'fire release',cfg.operator&&aux&&'operator',cfg.siren&&aux&&SIREN_TYPES[cfg.sirenType].name.toLowerCase()].filter(Boolean).join(', ')||'None'
+    };
+    const KEYS = {'Hub':'hub','Lock':'lock','Lock power':'power','Lock cable run':'run','Exit devices':'exit','Monitoring and outputs':'mon'};
+    let html = C.innerHTML;
+    html = html.replace(/<fieldset><legend>([^<]+)<\/legend>/g, (m,name)=>`<details class="acc" data-acc="${KEYS[name]}" ${UI.open[KEYS[name]]?'open':''}><summary><span class="h">${name}</span><span class="v">${SUMS[name]||''}</span></summary><div class="body">`);
+    html = html.replace(/<\/fieldset>/g,'</div></details>');
+    C.innerHTML = html;
+  }
+  C.addEventListener('toggle', e=>{ const d=e.target; if(d.dataset && d.dataset.acc){ UI.open[d.dataset.acc]=d.open; save(); } }, true);
+  C.addEventListener('click', e=>{
+    const b = e.target.closest('[data-seg]');
+    if(b){ const k=b.dataset.seg; let v=b.dataset.v; if(['lockV','psuV'].includes(k)) v=Number(v);
+      cfg[k]=v;
+      if(k==='doors' && v==='single' && cfg.lock==='mag2'){ cfg.lock='mag'; cfg.amps=LOCKS.mag.amps[cfg.lockV]; }
+      if(k==='doors' && v==='double' && cfg.lock==='mag'){ cfg.lock='mag2'; cfg.amps=LOCKS.mag2.amps[cfg.lockV]; }
+      if(k==='supply' && v==='hub'){ cfg.fireMethod='series'; cfg.sirenDrive='aux'; }
+      if(k==='fireMethod' && v==='psu' && cfg.supply==='psu' && cfg.psuType==='basic'){ cfg.psuType='acm'; cfg.psuBrand=0; }
+      if(k==='lockV'){ cfg.amps = LOCKS[cfg.lock].amps[v]; if(cfg.supply==='psu') cfg.psuV=v; }
+      update(); return; }
+
+  });
+  C.addEventListener('change', e=>{
+    const t=e.target;
+    if(t.dataset.chk){ cfg[t.dataset.chk]=t.checked; if(t.dataset.chk==='rexPir'&&!t.checked) cfg.pirDirect=false; }
+    if(t.dataset.sel){ const k=t.dataset.sel; cfg[k] = (k==='psuA'||k==='gauge'||k.endsWith('Brand'))? Number(t.value) : t.value;
+      if(k==='lock'){ cfg.lockBrand=0; if(cfg.lock==='mag2') cfg.doors='double';
+        if(LOCKS[cfg.lock].only24){ cfg.lockV=24; cfg.supply='psu'; cfg.psuV=24; cfg.psuType='mfr'; cfg.psuBrand=0; }
+        cfg.amps=LOCKS[cfg.lock].amps[cfg.lockV]; cfg.contact=recContact();
+        if(cfg.dpsType==='bond' && !(cfg.lock==='mag'||cfg.lock==='mag2')) { cfg.dpsType='recessed'; cfg.dpsBrand=0; }
+        if(!isSafe()){ cfg.pirDirect=false; cfg.manualRelease=false; cfg.fire=false; } }
+      if(k==='psuType'){ cfg.psuBrand=0; if(cfg.psuType==='basic' && cfg.fireMethod==='psu') cfg.fireMethod='series'; }
+      if(k==='dpsType') cfg.dpsBrand=0;
+      if(k==='sirenType') cfg.sirenAmps=SIREN_TYPES[cfg.sirenType].amps; }
+    if(t.dataset.num){ const v=parseFloat(t.value); if(!isNaN(v)&&v>0) cfg[t.dataset.num]=v; }
+    if(t.dataset.num0){ const v=parseFloat(t.value); if(!isNaN(v)&&v>=0) cfg[t.dataset.num0]=v; }
+    if(!HUBS[cfg.hub].aux){ cfg.operator=false; cfg.siren=false; }
+    update();
+  });
+
+  function canFix(b){ if(!FIXES[b]) return false; const snap=JSON.stringify(cfg); let ok=false;
+    try{ FIXES[b](); ok=!checks().some(c=>c[1]===b&&(c[0]==='bad'||c[0]==='warn')); }catch(e){}
+    const o=JSON.parse(snap); Object.keys(cfg).forEach(k=>delete cfg[k]); Object.assign(cfg,o); return ok; }
+  function fixReport(before,label){ const after=issueCount(), n0=before.bad+before.warn, n1=after.bad+after.warn, left=checks().filter(c=>c[0]==='bad'||c[0]==='warn').map(c=>c[1]);
+    document.getElementById('fixMsg').textContent=`${label}${n0>n1?` ${n0-n1} issue${n0-n1>1?'s':''} resolved.`:''}${n1?` Still needs you: ${left.join(', ')}.`:' All checks pass.'}`; }
+  function applyFixes(){
+    cfg.contact = recContact();
+    const L = LOCKS[cfg.lock];
+    if(cfg.lock==='mag2' && cfg.lockV===12){ cfg.lockV=24; cfg.amps=LOCKS.mag2.amps[24]; }
+    if(cfg.supply==='hub' && (cfg.lockV===24 || cfg.amps>0.8)){ cfg.supply='psu'; cfg.psuV=cfg.lockV; }
+    if(cfg.supply==='psu'){ cfg.psuV=cfg.lockV; const need=psuLoad().total/0.8; cfg.psuA=[1,2,3,4,6].find(a=>a>=need)||6; }
+    if(L.inductive) cfg.suppression=true;
+    if(cfg.egress && L.safe){
+      if(cfg.lock==='mag'||cfg.lock==='mag2'){ cfg.rexPir=true; cfg.pirDirect=true; cfg.manualRelease=true; }
+      cfg.fire=true;
+    }
+    if(!cfg.rexButton && !cfg.rexPir && L.safe) cfg.rexButton=true;
+    if(L.only24){ cfg.lockV=24; cfg.supply='psu'; cfg.psuV=24; if(cfg.psuType!=='mfr'){ cfg.psuType='mfr'; cfg.psuBrand=0; } cfg.psuA=Math.max(cfg.psuA,2); }
+    if(cfg.fire && cfg.fireMethod==='psu' && (cfg.supply!=='psu' || cfg.psuType==='basic')) cfg.fireMethod='series';
+    if(cfg.doors==='double' && cfg.lock==='mag'){ cfg.lock='mag2'; cfg.amps=LOCKS.mag2.amps[cfg.lockV]; }
+    cfg.dps=true; cfg.dpsForm='NC'; cfg.dpsTrigger='NC';
+    if(cfg.manualRelease && L.safe) cfg.mrRex=true;
+    if(cfg.operator){ const min=(cfg.lock==='mag'||cfg.lock==='mag2')?1:0.5; if(cfg.opDelay<min) cfg.opDelay=min; }
+    if(cfg.siren && cfg.sirenDrive==='aux' && cfg.sirenAmps>AUX_SIREN_MAX && cfg.supply==='psu') cfg.sirenDrive='relay';
+    if(cfg.sirenDrive==='relay' && cfg.supply!=='psu') cfg.sirenDrive='aux';
+    if(cfg.supply==='psu'){ const need=psuLoad().total/0.8; cfg.psuA=Math.max(cfg.psuA,[1,2,3,4,6].find(a=>a>=need)||6); }
+    if(dropRatio()<0.9) cfg.gauge=18;
+  }
+
+  // ---------- model ----------
+  const PIR_AMPS = 0.05, DRY_MAX_A = 1.0, DRY_MAX_V = 30;
+  function psuLoad(){
+    if(cfg.supply!=='psu') return {lock:0,pir:0,siren:0,total:0};
+    const lock = cfg.amps*(cfg.psuV/cfg.lockV);
+    const pir = cfg.rexPir ? PIR_AMPS : 0;
+    const siren = (HUBS[cfg.hub].aux && cfg.siren && cfg.sirenDrive==='relay') ? cfg.sirenAmps : 0;
+    return {lock,pir,siren,total:lock+pir+siren};
+  }
+  function loopOhms(){ return 2*cfg.run*OHMS[cfg.gauge]/1000; }
+  function supplyNominal(){ return cfg.supply==='hub'?12:cfg.psuV; }
+  function dropRatio(){ const V=supplyNominal(); const I=cfg.amps*(V/cfg.lockV); return (V - I*loopOhms())/cfg.lockV; }
+
+  function simulate(sc){
+    const s=sc||scenario, safe=isSafe(), aux=HUBS[cfg.hub].aux;
+    const mainsOn = s!=='power';
+    const hubPowered = s==='hubOff' ? false : (mainsOn || cfg.switchUps);
+    const fireViaPsu = cfg.fire && safe && cfg.fireMethod==='psu' && cfg.supply==='psu' && cfg.psuType!=='basic';
+    const psuDropped = fireViaPsu && s==='fire';
+    const psuOn = cfg.supply==='psu' ? ((mainsOn || cfg.battery) && !psuDropped) : false;
+    const requestBy = {grant:true, rexButton:cfg.rexButton, rexPir:cfg.rexPir, schedule:true}[s] || false;
+    const relay = hubPowered && requestBy;
+    const contactClosed = cfg.contact==='NC' ? !relay : relay;
+    const facpOpen = cfg.fire && safe && !fireViaPsu && s==='fire';
+    const manualOpen = cfg.manualRelease && safe && s==='manual';
+    const pirOpen = cfg.pirDirect && cfg.rexPir && safe && s==='rexPir';
+    const chainClosed = !facpOpen && !manualOpen && !pirOpen;
+    const supplyV = cfg.supply==='hub' ? (hubPowered?12:0) : (psuOn?cfg.psuV:0);
+    const path = contactClosed && chainClosed && supplyV>0;
+    const I = path ? cfg.amps*(supplyV/cfg.lockV) : 0;
+    const vLock = path ? Math.max(0, supplyV - I*loopOhms()) : 0;
+    const ratio = vLock/cfg.lockV;
+    const over = ratio>1.15;
+    const energized = ratio>=0.8;
+    const marginal = energized && ratio<0.9;
+    const locked = safe ? energized : !energized;
+    const doorOpen = (s==='forced'||s==='held');
+    const bond = cfg.dps && cfg.dpsType==='bond';
+    const notSecure = doorOpen || (bond && !locked);
+    const sensorClosed = cfg.dpsForm==='NC' ? !notSecure : notSecure;
+    const reportedOpen = cfg.dps && hubPowered && (cfg.dpsTrigger==='NC' ? !sensorClosed : sensorClosed);
+    const rexInputClosed = (s==='rexButton'&&cfg.rexButton)||(s==='rexPir'&&cfg.rexPir)||(s==='manual'&&cfg.mrRex&&cfg.manualRelease&&safe);
+    const shunted = relay || rexInputClosed;
+    const heldAlarm = s==='held' && reportedOpen;
+    const forcedAlarm = !heldAlarm && reportedOpen && !shunted;
+    const falseAlarm = (forcedAlarm||heldAlarm) && !doorOpen;
+    const sirenPower = cfg.sirenDrive==='relay' ? psuOn : true;
+    const siren = aux && cfg.siren && hubPowered && sirenPower && (forcedAlarm||heldAlarm);
+    const operatorOn = aux && cfg.operator && hubPowered && (s==='grant'||s==='rexButton');
+    const operatorBlocked = operatorOn && locked;
+    return {notSecure,fireViaPsu,psuDropped,bond,reportedOpen,falseAlarm,operatorBlocked,s,safe,mainsOn,hubPowered,psuOn,relay,contactClosed,facpOpen,manualOpen,pirOpen,chainClosed,supplyV,path,I,vLock,ratio,over,energized,marginal,locked,doorOpen,forcedAlarm,heldAlarm,siren,operatorOn,rexInputClosed,requestBy};
+  }
+
+  // ---------- schematic ----------
+  const S = document.getElementById('schem');
+  const pts = a => a.map(p=>p.join(',')).join(' ');
+  const wire = (a,cls) => {
+    const parts=cls.trim().split(/\s+/), col=parts[0], live=parts.includes('live'), idle=parts.includes('idle');
+    if(col==='eth') return `<polyline class="w eth" points="${pts(a)}"/>`;
+    return `<g class="${idle?'idle':''}"><polyline class="case" points="${pts(a)}"/><polyline class="w ${col}" points="${pts(a)}"/>${live?`<polyline class="flow" points="${pts(a)}"/>`:''}</g>`;
+  };
+  function term(x,y,label,anchor){
+    const lx = anchor==='right'? x-12 : x; const ly = anchor==='bottom'? y-14 : y+4;
+    return `<rect class="term" x="${x-7}" y="${y-7}" width="14" height="14" rx="2"/><circle class="screw" cx="${x}" cy="${y}" r="3"/>`+
+      (label?`<text class="t s" x="${lx}" y="${ly}" text-anchor="${anchor==='right'?'end':'middle'}">${label}</text>`:'');
+  }
+  function swBox(x,label1,label2,open,active){
+    const cx=x+45, y0=140;
+    const lever = open ? `<line class="lever" x1="${cx-16}" y1="176" x2="${cx+12}" y2="164"/>` : `<line class="lever" x1="${cx-16}" y1="176" x2="${cx+16}" y2="176"/>`;
+    return `<g><rect class="box" x="${x}" y="${y0}" width="90" height="62" rx="8" ${active?'style="stroke:var(--bad);stroke-width:2"':''}/>
+      <text class="t m" x="${cx}" y="155" font-size="12.5">${label1}</text>
+      <line x1="${x}" y1="176" x2="${cx-16}" y2="176" stroke="var(--muted)" stroke-width="1.5"/>
+      <line x1="${cx+16}" y1="176" x2="${x+90}" y2="176" stroke="var(--muted)" stroke-width="1.5"/>
+      <circle class="dot" cx="${cx-16}" cy="176" r="2.6"/><circle class="dot" cx="${cx+16}" cy="176" r="2.6"/>${lever}
+      <text class="t s m" x="${cx}" y="196">${label2}${open?', open':''}</text></g>`;
+  }
+  function renderSchematic(r){
+    const L=LOCKS[cfg.lock], hub=HUBS[cfg.hub], dry=cfg.supply==='psu';
+    const live = r.path ? 'live' : '';
+    const plusCls = `red ${live}`, minusCls = `blk ${live}`;
+    let g='';
+    // reader
+    g+=`<rect class="box" x="66" y="26" width="128" height="58" rx="8"/><text class="t b m" x="130" y="50">G3 Reader</text><text class="t s m" x="130" y="68">entry side, PoE from hub</text>`;
+    g+=wire([[130,84],[130,120]],'eth');
+    // hub
+    g+=`<rect class="hubbox" x="30" y="120" width="300" height="300" rx="10"/>
+      <text class="t b" x="48" y="146">${hub.name}</text><text class="t s" x="48" y="163">${hub.model}</text>
+      <text class="t s" x="48" y="194">PoE++ in</text><text class="t" x="48" y="211" fill="${r.hubPowered?'var(--ok)':'var(--bad)'}" style="fill:${r.hubPowered?'var(--ok)':'var(--bad)'}">${r.hubPowered?'Online':'No power'}</text>
+      <text class="t s" x="48" y="240">Relay state</text><text class="t" x="48" y="257">${r.relay?'Energized, unlocking':'At rest, on NC'}</text>
+      <text class="t s" x="48" y="286">Lock output</text><text class="t" x="48" y="303">${dry?'Dry: switch only':'Powered: 12V, 1A max'}</text>`;
+    // relay contact glyph inside hub near terminals
+    const used = cfg.contact==='NO'?190:220;
+    const pivotHot = dry ? r.psuOn : r.hubPowered;
+    g+=`<text class="t s" x="322" y="137" text-anchor="end">${dry?'Lock terminal, dry':'Lock terminal, powered'}</text>`;
+    g+=`<line x1="282" y1="190" x2="323" y2="190" stroke="var(--muted)" stroke-width="1.5"/><line x1="282" y1="220" x2="323" y2="220" stroke="var(--muted)" stroke-width="1.5"/>`;
+    if(dry){ g+=`<polyline points="232,205 232,160 323,160" fill="none" stroke="${pivotHot?'var(--plus)':'var(--muted)'}" stroke-width="1.5"/>`; }
+    else { g+=`<line x1="206" y1="205" x2="232" y2="205" stroke="${pivotHot?'var(--plus)':'var(--muted)'}" stroke-width="1.5"/><text class="t s" x="202" y="209" text-anchor="end" style="fill:${pivotHot?'var(--plus)':'var(--muted)'}">+12V</text>
+      <line x1="262" y1="160" x2="323" y2="160" stroke="var(--minus)" stroke-width="1.5"/><text class="t s" x="258" y="164" text-anchor="end">GND</text>`; }
+    g+=`<line class="lever" x1="232" y1="205" x2="279" y2="${r.relay?192:218}" style="stroke:${pivotHot?'var(--plus)':'var(--ink)'}"/>`;
+    g+=`<circle class="dot" cx="232" cy="205" r="3.2"/><circle class="dot" cx="282" cy="190" r="2.6"/><circle class="dot" cx="282" cy="220" r="2.6"/>`;
+    g+=`<text class="t s m" x="257" y="242">relay</text>`;
+    g+=term(330,160,'')+term(330,190,'')+term(330,220,'');
+    [['COM',160],['NO',190],['NC',220]].forEach(([l,y])=>{ g+=`<text class="t s" x="318" y="${y-6}" text-anchor="end" style="${(l==='NO'&&used===190)||(l==='NC'&&used===220)?'fill:var(--plus);font-weight:600':''}">${l}</text>`; });
+    // inputs bottom
+    const inputs=[['Exit req.',60,85,true],['Door pos.',130,155,true],['Operator',200,225,hub.aux],['Siren',270,295,hub.aux]];
+    inputs.forEach(([lab,a,b,on])=>{ if(!on) return; g+=`<text class="t s m" x="${(a+b)/2}" y="392">${lab}</text>`+term(a,420,'')+term(b,420,'');
+      g+=`<text class="t s m" x="${a}" y="410">+</text><text class="t s m" x="${b}" y="410">−</text>`; });
+    if(!hub.aux) g+=`<text class="t s" x="190" y="404">No AUX outputs</text>`;
+    // PSU
+    if(dry){
+      g+=`<rect class="box" x="380" y="16" width="200" height="60" rx="8"/><text class="t b m" x="480" y="40">External PSU ${cfg.psuV}V DC</text>
+        <text class="t s m" x="480" y="58" style="${r.psuOn?'':'fill:var(--bad)'}">${cfg.psuA} A${cfg.battery?', battery':''}${r.fireViaPsu?', fire input':''}${r.psuOn?'':(r.psuDropped?', tripped':', no output')}</text>`;
+      g+=term(380,46,'')+term(580,46,'');
+      g+=`<text class="t s" x="392" y="71">+</text><text class="t s" x="560" y="71">−</text>`;
+      g+=wire([[380,46],[345,46],[345,160],[330,160]], `red ${r.psuOn?live:''} ${r.psuOn?'':'idle'}`);
+    }
+    // + path from contact
+    let x=370;
+    g+=wire([[330,used],[370,used],[370,176],[410,176]], plusCls);
+    const slots=[];
+    if(cfg.fire && r.safe && !r.fireViaPsu) slots.push(['Fire alarm relay','NC contact',r.facpOpen]);
+    if(cfg.manualRelease && r.safe) slots.push(['Push-to-exit','NC button',r.manualOpen]);
+    if(cfg.pirDirect && cfg.rexPir && r.safe) slots.push(['Motion REX','NC contact',r.pirOpen]);
+    const xs=[410,530,650];
+    let cur=410;
+    slots.forEach((sl,i)=>{ const bx=xs[i]; if(bx>cur) g+=wire([[cur,176],[bx,176]],plusCls); g+=swBox(bx,sl[0],sl[1],sl[2],sl[2]); cur=bx+90; });
+    g+=wire([[cur,176],[800,176]], plusCls);
+    // lock
+    const lockFill = r.locked ? 'var(--ok)' : 'var(--bad)';
+    g+=`<rect class="box" x="800" y="128" width="170" height="122" rx="8" style="stroke:${lockFill};stroke-width:2"/>
+      <text class="t b" x="816" y="152">${L.short}</text>
+      <text class="t s" x="816" y="170">${cfg.lockV}V DC, ${fmt(cfg.amps)} A</text><text class="t s" x="816" y="238">${L.safe?'Fail-safe':'Fail-secure'}</text>
+      <text class="t" x="816" y="196" style="fill:${lockFill};font-weight:600;font-size:15px">${r.locked?'Locked':'Unlocked'}${r.marginal?' (low voltage)':''}</text>
+      <text class="t s" x="816" y="216">${fmt(r.vLock,1)} V at lock</text>`;
+    if(cfg.suppression){ g+=`<g transform="translate(930,206)"><polygon points="0,-7 0,7 10,0" fill="var(--muted)"/><line x1="10" y1="-7" x2="10" y2="7" stroke="var(--muted)" stroke-width="2"/></g><text class="t s" x="935" y="234" text-anchor="middle">diode</text>`; }
+    g+=term(800,176,'')+`<text class="t s" x="790" y="166" text-anchor="middle">+</text>`;
+    g+=term(880,250,'')+`<text class="t s" x="893" y="246">−</text>`;
+    // return
+    if(dry) g+=wire([[880,250],[880,290],[985,290],[985,46],[580,46]], minusCls);
+    else g+=wire([[880,250],[880,290],[985,290],[985,100],[345,100],[345,160],[330,160]], minusCls);
+    // bottom devices
+    const dev=(x,l1,l2,on,a,b,cls,hot,cls2)=>{ g+=wire([[a,427],[a,470]],cls)+wire([[b,427],[b,470]],cls2);
+      g+=`<rect class="box" x="${x}" y="470" width="66" height="62" rx="8" ${hot?'style="stroke:var(--live);stroke-width:2.5"':''}/><text class="t m" x="${x+33}" y="494" font-size="12.5">${l1}</text><text class="t s m" x="${x+33}" y="512">${l2}</text>`;
+      if(on!==undefined) g+=`<text class="t s m" x="${x+33}" y="526" style="fill:${on?'var(--live)':'var(--muted)'}">${on?'active':''}</text>`; };
+    if(cfg.rexButton||cfg.rexPir) dev(39,'Exit', (cfg.rexButton&&cfg.rexPir)?'button + PIR':cfg.rexButton?'button, NO':'PIR, NO', r.rexInputClosed, 60,85, `grn ${r.rexInputClosed&&r.hubPowered?'live':''}`, r.rexInputClosed, `wht ${r.rexInputClosed&&r.hubPowered?'live':''}`);
+    if(cfg.dps){ const sc=!r.notSecure===(cfg.dpsForm==='NC'); dev(109, r.bond?'Bond':'Door', `${r.bond?'sensor':'contact'}, ${cfg.dpsForm}`, r.reportedOpen, 130,155, `grn ${sc&&r.hubPowered?'live':''}`, r.reportedOpen, `wht ${sc&&r.hubPowered?'live':''}`); }
+    if(hub.aux && cfg.operator) dev(179,'Door','operator', r.operatorOn, 200,225, `grn ${r.operatorOn?'live':''}`, r.operatorOn, `wht ${r.operatorOn?'live':''}`);
+    if(hub.aux && cfg.siren) dev(249, SIREN_TYPES[cfg.sirenType].name.split(' ')[0], cfg.sirenDrive==='relay'?'via relay':'12V AUX', r.siren, 270,295, `red ${r.siren?'live':''}`, r.siren, `blk ${r.siren?'live':''}`);
+    // compact door summary (full drawing is in the At the door card)
+    const alarm = r.forcedAlarm?'Forced-open alarm':r.heldAlarm?'Held-open alarm':(r.doorOpen&&!cfg.dps)?'Open, not detected':'';
+    g+=`<text class="t s" x="770" y="360">Door</text><text class="t" x="770" y="382" style="font-weight:600;fill:${alarm?'var(--bad)':'var(--ink)'}">${r.doorOpen?'Open':'Closed'}${alarm?', '+alarm.toLowerCase():''}</text>
+      <text class="t s" x="770" y="406">${cfg.doors==='double'?'Pair of doors':'Single door'}</text>`;
+    S.innerHTML = `<svg viewBox="0 0 1000 580" role="img" aria-label="Wiring schematic for the configured door">${g}</svg>`;
+  }
+
+  // ---------- door view ----------
+
+  function renderDoorView(r){
+    const L=LOCKS[cfg.lock], hub=HUBS[cfg.hub], dry=cfg.supply==='psu';
+    const mag=cfg.lock==='mag'||cfg.lock==='mag2', strike=cfg.lock==='fsafe'||cfg.lock==='fsecure', leaf=!!L.leaf, elr=cfg.lock==='elr';
+    const dbl = cfg.doors==='double';
+    const SC=3.6, floor=490, ceil=floor-108*SC, top=floor-84*SC, dw=(dbl?72:36)*SC, PW=440;
+    const dx = dbl ? (PW-dw)/2 - 10 : 135;
+    const hy = inch => floor - inch*SC;
+    const open = r.doorOpen || (r.operatorOn && !r.locked);
+    const lockCol = r.locked ? 'var(--ok)' : 'var(--bad)';
+    let out='';
+    const panel = (ox, side) => {
+      const inn = side==='in';
+      const X = x => inn ? ox + PW - x : ox + x;            // mirror the inside view
+      const R = (x,y,w,h,attrs) => `<rect x="${inn? ox+PW-x-w : ox+x}" y="${y}" width="${w}" height="${h}" ${attrs}/>`;
+      const T = (x,y,txt,cls='dv-lbl',anchor='start') => `<text class="${cls}" x="${X(x)}" y="${y}" text-anchor="${inn?(anchor==='start'?'end':anchor==='end'?'start':'middle'):anchor}">${txt}</text>`;
+      const lead = (x1,y1,x2,y2) => `<line class="dv-lead" x1="${X(x1)}" y1="${y1}" x2="${X(x2)}" y2="${y2}"/>`;
+      let g='';
+      // ceiling, wall, floor
+      g+=R(0,20,PW,ceil-20,'fill="var(--ceil)"');
+      for(let x=0;x<PW;x+=48) g+=`<line x1="${ox+x}" y1="${ceil}" x2="${ox+x}" y2="${ceil-8}" stroke="var(--line)"/>`;
+      g+=R(0,ceil,PW,floor-ceil,'fill="var(--wall)"');
+      g+=`<line x1="${ox}" y1="${ceil}" x2="${ox+PW}" y2="${ceil}" stroke="var(--frame)" stroke-width="1.5"/><line x1="${ox}" y1="${floor}" x2="${ox+PW}" y2="${floor}" stroke="var(--frame)" stroke-width="2.5"/>`;
+      // frame and opening
+      g+=R(dx-7,top-7,dw+14,floor-top+7,'fill="var(--frame)" rx="1"');
+      g+=R(dx,top,dw,floor-top,'fill="var(--beyond)"');
+      // leaves
+      const leaves = dbl ? [[dx,dw/2,'L'],[dx+dw/2,dw/2,'R']] : [[dx,dw,'S']];
+      leaves.forEach(([lx,lw,id])=>{
+        const active = id==='S' || id==='R' || cfg.lock==='mag2' || elr;
+        const isOpen = open && (id==='S' || id==='R');
+        const hingeLeft = id!=='R';
+        if(isOpen){
+          const hx = hingeLeft? lx : lx+lw, fx = hingeLeft? lx+lw*0.38 : lx+lw*0.62;
+          g+=`<polygon points="${X(hx)},${top} ${X(fx)},${top+14} ${X(fx)},${floor-10} ${X(hx)},${floor}" fill="var(--door)" stroke="var(--frame)" stroke-width="1.2"/>`;
+          return;
+        }
+        g+=R(lx+0.5,top,lw-1,floor-top,'fill="var(--door)" stroke="var(--frame)" stroke-width="1"');
+        // hinges
+        const hxp = hingeLeft? lx-3 : lx+lw-1;
+        [top+11*SC, top+42*SC, floor-11*SC-14].forEach((y,i)=>{ const ept = leaf && active && i===1;
+          g+=R(hxp,y,4,14,`fill="${ept?'var(--amber)':'var(--metal)'}" rx="1"`); });
+        const latchX = hingeLeft? lx+lw : lx;          // latch edge of this leaf
+        const dir = hingeLeft? -1 : 1;                 // toward hinge
+        // hardware on the leaf
+        if(leaf && active){
+          const ex = latchX + dir*(cfg.lock.startsWith('cyl')?14:12);
+          if(cfg.lock.startsWith('cyl')) g+=`<circle cx="${X(ex)}" cy="${hy(38)}" r="7" fill="var(--metal)" stroke="var(--frame)"/>`;
+          else g+=R(Math.min(ex-4,ex+4)-0,hy(38)-16,8,32,'fill="var(--metal)" stroke="var(--frame)" rx="2"');
+          g+=`<line x1="${X(ex)}" y1="${hy(38)}" x2="${X(ex+dir*22)}" y2="${hy(38)}" stroke="var(--frame)" stroke-width="4" stroke-linecap="round"/>`;
+          if(!inn && !cfg.lock.startsWith('cyl')) g+=`<circle cx="${X(ex)}" cy="${hy(38)+10}" r="3" fill="var(--frame)"/>`;
+        } else if(elr){
+          if(inn){ const bx0=Math.min(lx+8,lx+lw-8), bw=lw-16;
+            g+=R(bx0,hy(38)-5,bw,10,`fill="var(--metal)" stroke="var(--frame)" rx="3"`);
+            g+=R(hingeLeft? lx+lw-18 : lx+4, hy(38)-7, 14, 14, 'fill="var(--frame)" rx="2"'); }
+          else g+=`<line x1="${X(latchX+dir*12)}" y1="${hy(38)}" x2="${X(latchX+dir*30)}" y2="${hy(38)}" stroke="var(--frame)" stroke-width="4" stroke-linecap="round"/>`;
+        } else if(active || dbl){
+          if(strike || cfg.lock==='bolt' || (!mag && active)){
+            if(strike){ g+=`<circle cx="${X(latchX+dir*12)}" cy="${hy(38)}" r="6" fill="var(--metal)" stroke="var(--frame)"/><line x1="${X(latchX+dir*12)}" y1="${hy(38)}" x2="${X(latchX+dir*32)}" y2="${hy(38)}" stroke="var(--frame)" stroke-width="4" stroke-linecap="round"/>`; }
+            else g+=inn? R(latchX+dir*24-(dir<0?0:10),hy(44)-10,10,40,'fill="var(--metal)" rx="2"') : `<line x1="${X(latchX+dir*14)}" y1="${hy(32)}" x2="${X(latchX+dir*14)}" y2="${hy(48)}" stroke="var(--frame)" stroke-width="4" stroke-linecap="round"/>`;
+          } else if(mag){
+            g+=inn? R(hingeLeft? lx+lw-30 : lx+10,hy(44)-12,20,40,'fill="var(--metal)" rx="2"') : `<line x1="${X(latchX+dir*14)}" y1="${hy(32)}" x2="${X(latchX+dir*14)}" y2="${hy(48)}" stroke="var(--frame)" stroke-width="4" stroke-linecap="round"/>`;
+          }
+        }
+        // inactive leaf flush bolts on a pair (non-maglock)
+        if(dbl && id==='L' && !mag && !elr){ g+=R(lx+lw-8,top+3,3,16,'fill="var(--frame)"')+R(lx+lw-8,floor-19,3,16,'fill="var(--frame)"'); }
+        // maglock armature (inside, on the leaf top)
+        if(inn && mag && (cfg.lock==='mag2'||active)){ const ax = hingeLeft? lx+lw-44 : lx+4; g+=R(ax,top+1,40,7,'fill="var(--metal)" stroke="var(--frame)" stroke-width=".8"'); }
+      });
+      // frame-mounted parts: latch side of the active leaf
+      const latchEdge = dx+dw;
+      if(strike && inn){ g+=R(latchEdge,hy(38)-11,5,22,`fill="${lockCol}"`); }
+      if(cfg.lock==='bolt'){ g+=R(latchEdge-20,top-7,12,7,`fill="${lockCol}"`); }
+      if(mag && inn){
+        if(cfg.lock==='mag2'){ g+=R(dx+dw/2-44,top-10,40,11,`fill="var(--metal)" stroke="${lockCol}" stroke-width="2"`)+R(dx+dw/2+4,top-10,40,11,`fill="var(--metal)" stroke="${lockCol}" stroke-width="2"`); }
+        else g+=R(latchEdge-44,top-10,40,11,`fill="var(--metal)" stroke="${lockCol}" stroke-width="2"`);
+      }
+      if(cfg.dps && inn && cfg.dpsType!=='bond'){ const cx = dbl? [dx+20, dx+dw-20] : [latchEdge-56]; cx.forEach(c=>{ g+=R(c,top-6,6,5,'fill="var(--ink)"'); }); }
+      // wall devices, latch side
+      const wx = latchEdge+7+22;
+      if(!inn){
+        const lit = !r.hubPowered ? 'var(--muted)' : (r.relay ? 'var(--ok)' : 'var(--sig)');
+        g+=R(wx,hy(44)-20,16,40,'fill="var(--panel)" stroke="var(--frame)" rx="5"')+R(wx+3,hy(44)+12,10,3,`fill="${lit}" rx="1.5"`);
+        g+=T(wx+22,hy(44)-24,'G3 Reader')+lead(wx+16,hy(44)-10,wx+22,hy(44)-21);
+        if(hub.aux&&cfg.operator){ g+=R(wx+30,hy(40)-9,18,18,'fill="var(--panel)" stroke="var(--sig)" stroke-width="1.5" rx="2"')+T(wx+30,hy(40)+22,'Push plate'); }
+        g+=T(dx+dw/2,floor-6,'','dv-lbl','middle');
+      } else {
+        let y0=hy(44);
+        if(cfg.manualRelease && r.safe){ const on=r.s==='manual'; g+=R(wx,y0-9,18,18,`fill="var(--panel)" stroke="${on?'var(--live)':'var(--frame)'}" stroke-width="${on?2.5:1}" rx="2"`)+`<circle cx="${X(wx+9)}" cy="${y0}" r="5" fill="#2D8A3E"/>`+T(wx+24,y0+4,'Push to exit'); y0+=34; }
+        if(cfg.rexButton){ const on=r.s==='rexButton'; g+=R(wx,y0-9,18,18,`fill="var(--panel)" stroke="${on?'var(--live)':'var(--frame)'}" stroke-width="${on?2.5:1}" rx="2"`)+`<circle cx="${X(wx+9)}" cy="${y0}" r="4" fill="var(--metal)"/>`+T(wx+24,y0+4,'Exit button'); }
+        if(cfg.rexPir){ const cx=dx+dw/2, py=(hub.aux&&cfg.operator)? top-52 : top-26; const on=r.s==='rexPir';
+          if(on) g+=`<polygon points="${X(cx-8)},${py+6} ${X(cx+8)},${py+6} ${X(cx+70)},${hy(0)} ${X(cx-70)},${hy(0)}" fill="var(--live)" opacity=".18"/>`;
+          g+=R(cx-14,py-4,28,10,'fill="var(--panel)" stroke="var(--frame)" rx="3"')+`<circle cx="${X(cx)}" cy="${py+1}" r="3" fill="${on?'var(--live)':'var(--metal)'}"/>`+T(cx+20,py+4,'Motion REX'); }
+        if(hub.aux&&cfg.siren){ const sx=wx+6, sy=hy(92); const on=r.siren;
+          g+=R(sx-2,sy+6,20,6,'fill="var(--frame)" rx="1"')+R(sx,sy-4,16,11,`fill="var(--amber)" rx="6" opacity="${on?1:.55}" class="${on?'flash':''}"`)+T(sx+24,sy+6, SIREN_TYPES[cfg.sirenType].name);
+          if(on) g+=`<g class="flash" stroke="var(--amber)" stroke-width="2"><line x1="${X(sx+8)}" y1="${sy-6}" x2="${X(sx+8)}" y2="${sy-14}"/><line x1="${X(sx-4)}" y1="${sy}" x2="${X(sx-12)}" y2="${sy-6}"/><line x1="${X(sx+20)}" y1="${sy}" x2="${X(sx+28)}" y2="${sy-6}"/></g>`; }
+        if(hub.aux&&cfg.operator){ const oy=top-34; g+=R(dx-14,oy,dw+28,16,'fill="var(--metal)" stroke="var(--frame)" rx="2"')+T(dx+dw/2+ (dbl?60:0),oy+12,'Door operator','dv-lbl','middle');
+          const ax = dbl? dx+dw*0.75 : dx+dw*0.3; g+=`<line x1="${X(ax)}" y1="${oy+16}" x2="${X(ax+(open?18:0))}" y2="${top+(open?26:8)}" stroke="var(--frame)" stroke-width="3" stroke-linecap="round"/>`;
+          g+=R(dx-48,hy(40)-9,18,18,'fill="var(--panel)" stroke="var(--sig)" stroke-width="1.5" rx="2"'); }
+        else { // closer on the hinge side
+          const cx0 = dbl? dx+6 : dx+6; g+=R(cx0,top+10,30,8,'fill="var(--metal)" rx="2"'); }
+        // above ceiling: hub and supply
+        g+=R(28,38,52,30,'fill="var(--panel)" stroke="var(--frame)" rx="4"')+T(28,34,hub.name);
+        g+=`<path d="M${X(54)} 68 V${ceil} M${X(54)} ${ceil} V${ceil+0}" stroke="var(--case)" stroke-dasharray="3 3" fill="none"/>`;
+        g+=`<path d="M${X(80)} 54 H${X(latchEdge-20)} V${top-8}" stroke="var(--case)" stroke-dasharray="3 3" fill="none"/>`;
+        if(dry){ g+=R(100,30,46,40,'fill="var(--metal)" stroke="var(--frame)" rx="2"')+R(104,34,38,10,`fill="${r.psuOn?'var(--ok)':'var(--bad)'}" opacity=".5"`)+T(100,26,`PSU ${cfg.psuV}V`); }
+        g+=T(28,ceil-6,'Above the ceiling','dv-lbl');
+        // labels for lock parts
+        if(mag) g+=T(latchEdge+12, top+14, cfg.lock==='mag2'?'Double maglock (header)':'Maglock (header)')+T(latchEdge+12, top+28, 'Armature on the door');
+        if(leaf) g+= dbl ? T(dx+dw+12,top+42*SC+12,'Power transfer hinge') : T(dx-12,top+42*SC+12,'Power transfer hinge','dv-lbl','end');
+        if(elr) g+=T(dx+dw/2,hy(38)-14,'Panic bar, latch retraction','dv-lbl','middle');
+        if(cfg.dps && cfg.dpsType!=='bond') g+=T((dbl?dx+20:latchEdge-56)-4,top-12,'Door contact','dv-lbl','end');
+      }
+      if(strike && inn) g+=T(latchEdge+10, hy(38)+30, 'Electric strike in frame');
+      if(cfg.lock==='bolt') g+=T(latchEdge+10, top-14, 'Electric bolt');
+      if(leaf && !inn) g+=T(dx+dw-20,hy(38)+28,(cfg.lock.startsWith('cyl')?'Electrified lever lock':'Electrified mortise lock'),'dv-lbl','end');
+      // titles and state
+      g+=`<text class="dv-title" x="${ox+PW/2}" y="14" text-anchor="middle">${inn?'Secure side (inside)':'Entry side (outside)'}</text>`;
+      if(inn && r.s==='fire') g+=`<text class="dv-lbl" x="${ox+PW/2}" y="${floor+22}" text-anchor="middle" style="fill:var(--bad);font-weight:600">Fire alarm active</text>`;
+      if(inn && r.s==='power') g+=`<text class="dv-lbl" x="${ox+PW/2}" y="${floor+22}" text-anchor="middle" style="fill:var(--bad);font-weight:600">Mains power off</text>`;
+      return g;
+    };
+    out += panel(0,'out') + panel(460,'in');
+    out += `<text class="dv-title" x="450" y="${floor+22}" text-anchor="middle" style="fill:${r.locked?'var(--ok)':'var(--bad)'}">${r.locked?'Locked':'Unlocked'}${open?', door open':''}</text>`;
+    const svg = `<svg viewBox="0 0 900 520" role="img" aria-label="Elevation of the door from the entry side and the secure side">${out}</svg>`;
+    document.querySelectorAll('[data-doorview]').forEach(el=>{ el.innerHTML = svg; });
+  }
+
+  // ---------- status, explanation ----------
+  function renderStatus(r){
+    const L=LOCKS[cfg.lock];
+    const tone = (r.over||!r.energized)?'bad':r.marginal?'warn':'ok';
+    const label = r.over?'Over-voltage':!r.energized?'Under-voltage':r.marginal?'Marginal voltage':'Voltage OK';
+    document.getElementById('status').innerHTML = `
+      <div class="state"><span class="big" style="color:${r.locked?'var(--ok)':'var(--bad)'}">${r.locked?'Locked':'Unlocked'}</span>
+      ${r.path?`<span class="pill ${tone}">${label}</span>`:''}</div>
+      <p class="pathline"><span class="lab">Lock circuit, in order</span>${circuitPath(r)}</p>
+      <dl class="kv">
+        <dt>Lock</dt><dd>${L.name}, ${cfg.lockV}V</dd>
+        <dt>Supply</dt><dd>${cfg.supply==='hub'?'Hub powered terminal, 12V':'External PSU, '+cfg.psuV+'V'} ${r.supplyV>0?'':'(no output)'}</dd>
+        <dt>At the lock</dt><dd>${fmt(r.vLock,1)} V, ${fmt(r.I)} A</dd>
+        <dt>Hub relay</dt><dd>${r.relay?'Energized, NO closed, NC open':'At rest, NC closed, NO open'}</dd>
+        <dt>Door</dt><dd>${r.doorOpen?'Open':'Closed'}${cfg.dps?`; hub sees it as ${r.reportedOpen?'open':'closed'}${r.falseAlarm?' (false alarm)':''}`:' (not monitored)'}</dd>
+        ${HUBS[cfg.hub].aux?`<dt>AUX</dt><dd>${[cfg.operator?('Operator '+(r.operatorOn?'activated':'idle')):'',cfg.siren?('Siren '+(r.siren?'sounding':'quiet')):''].filter(Boolean).join(', ')||'Nothing connected'}</dd>`:''}
+      </dl>`;
+    document.getElementById('explain').innerHTML = explain(r).map(p=>`<p>${p}</p>`).join('');
+  }
+  function circuitPath(r){
+    const dry=cfg.supply==='psu', safe=isSafe(), o=t=>` <span class="open">(${t})</span>`;
+    const p=[];
+    p.push(dry?`PSU + ${cfg.psuV}V${r.psuOn?'':o(r.psuDropped?'dropped by fire input':'no power')}`:`Hub internal 12V${r.hubPowered?'':o('no power')}`);
+    if(dry) p.push('hub dry COM');
+    p.push(`relay ${cfg.contact}${r.contactClosed?'':o('open')}`);
+    if(cfg.fire&&safe&&!r.fireViaPsu) p.push(`fire relay NC${r.facpOpen?o('open'):''}`);
+    if(cfg.manualRelease&&safe) p.push(`push-to-exit NC${r.manualOpen?o('open'):''}`);
+    if(cfg.pirDirect&&cfg.rexPir&&safe) p.push(`motion sensor NC${r.pirOpen?o('open'):''}`);
+    p.push('lock +','lock −', dry?'PSU −':'hub COM (ground)');
+    return p.join(' → ');
+  }
+  function explain(r){
+    const L=LOCKS[cfg.lock], out=[], s=r.s, lockWord=L.noun;
+    const intro = {
+      idle:'Nobody is requesting entry.', grant:'A user presents a valid credential at the G3 Reader.',
+      rexButton: cfg.rexButton?'Someone presses the exit button. It closes the exit request input on the hub.':'No exit button is installed on this door.',
+      rexPir: cfg.rexPir?'The motion sensor sees someone approach from the secure side and closes its NO contact on the exit request input.':'No motion sensor is installed on this door.',
+      manual: cfg.manualRelease&&r.safe?'Someone presses the push-to-exit button. Its NC contact opens and breaks the lock power circuit directly.':'No push-to-exit manual release is installed in the lock circuit.',
+      schedule:'An unlock schedule in UniFi Access holds the door unlocked for business hours.',
+      forced:'The door is pulled open without a credential or exit request.',
+      held:'The door was opened on a valid credential, but nobody closed it before the held-open timer ran out.',
+      fire:'The fire alarm panel goes into alarm.', power:'Mains power to the building drops.',
+      hubOff:'The hub loses its PoE++ feed, for example a cut cable or a switch failure.'
+    }[s];
+    out.push(intro);
+    if(s==='power') out.push(`The hub is ${r.hubPowered?'still running because the PoE switch is on a UPS':'down, because the PoE switch isn’t on a UPS'}.${cfg.supply==='psu'?` The external supply is ${r.psuOn?'running on its battery':'off, with no battery backup'}.`:''}`);
+    if(r.requestBy && r.hubPowered) out.push('The hub energizes its lock relay for the unlock duration: NO closes and NC opens.');
+    else if(r.requestBy && !r.hubPowered) out.push('The hub has no power, so it can’t act on the request.');
+    else if(!r.hubPowered) out.push('With no power, the hub’s relay sits at rest: NC closed, NO open.');
+    if(cfg.supply==='hub' && !r.hubPowered) out.push('This lock takes its power from the hub’s 12V terminal, so it has lost power too.');
+    if(r.facpOpen) out.push('The fire panel relay opens and cuts lock power regardless of what the hub is doing.');
+    if(r.psuDropped) out.push('The fire panel relay opens the supply’s fire alarm input, and the supply shuts off its lock outputs. Most supplies stay off until the fire panel resets, and some need a manual reset at the supply.');
+    if(s==='fire' && r.safe && !cfg.fire) out.push('There is no fire alarm relay in the lock circuit, so nothing releases this door. On an egress path that usually fails inspection.');
+    if(s==='fire' && !r.safe) out.push('A fail-secure lock stays locked when power is cut, so fire release doesn’t apply. Free egress has to come from the mechanical lever or panic bar on the inside.');
+    if(r.pirOpen) out.push('The sensor’s NC contact also opens in the lock circuit, releasing the lock even if the hub were offline.');
+    // result
+    if(r.path){
+      out.push(`Current flows through the ${cfg.contact} contact to the ${lockWord}: ${fmt(r.vLock,1)} V reaches the lock after ${fmt(r.supplyV-r.vLock,2)} V of cable drop.`);
+    } else {
+      const why = !r.contactClosed?`the ${cfg.contact} contact is open`:!r.chainClosed?'a series release device is open':'there is no supply voltage';
+      out.push(`No current reaches the lock because ${why}.`);
+    }
+    if(r.over) out.push(`The lock is getting well above its ${cfg.lockV}V rating. Expect overheating and early failure.`);
+    if(r.path && !r.energized) out.push(`That’s under 80% of the lock’s rating, so it won’t ${r.safe?'hold':'retract'} reliably.`);
+    out.push(r.safe ? (r.locked?`The fail-safe ${lockWord} is powered, so the door stays locked${r.marginal?', but with low voltage the holding force is reduced':''}.`:`The fail-safe ${lockWord} ${r.path?'isn’t getting enough voltage to hold':'has no power'}, so the door is unlocked.`)
+                    : (r.locked?`The fail-secure ${lockWord} ${r.path?'isn’t getting enough voltage to release':'has no power'}, so it stays locked.`:`The fail-secure ${lockWord} is powered, so it releases and the door can be opened.`));
+    if(r.falseAlarm) out.push(r.bond?'The maglock’s bond sensor opens whenever the lock loses power, so the hub sees the door as not secure even though it’s shut. Expect this during fire and power events; everywhere else, pair the release with an exit request signal.':(cfg.dpsForm!==cfg.dpsTrigger?'The door contact and the Access trigger setting don’t match, so the hub reads the door backwards and reports a closed door as open.':'The hub sees the door as open and nothing told it to expect that, so it raises an alarm.'));
+    else if(s==='manual' && cfg.dps && !cfg.mrRex && cfg.manualRelease && r.safe) out.push('This push-to-exit only cuts lock power, so when someone walks out the hub logs a forced door. A double-pole button with a second contact on the exit request input avoids that.');
+    if(s==='forced'||s==='held'){
+      if(!cfg.dps) out.push('There’s no door position sensor, so the hub can’t tell the door is open and no alarm is raised.');
+      else if(!r.hubPowered) out.push('The hub is offline, so the open door goes unreported.');
+      else out.push(`The door position sensor opens and the hub raises a ${s==='forced'?'forced-open':'held-open'} alarm in UniFi Access${r.siren?`, and the ${SIREN_TYPES[cfg.sirenType].name.toLowerCase()} turns on`:''}.`);
+    }
+    if(cfg.lock==='elr' && (r.relay)) out.push('On a real install, the hub’s relay closes the exit device supply’s control input, and the supply powers the latch retraction motor. The schematic simplifies this to a direct connection.');
+    if(r.operatorOn) out.push(r.operatorBlocked?'The AUX door operator contact closes, but the lock is still locked, so the operator would push against a locked door. Fix the lock wiring first.':`The AUX door operator contact closes and the ${OP_TYPES[cfg.opType].split(' (')[0].toLowerCase()} operator opens the door after a ${fmt(cfg.opDelay,2)} s delay, giving the lock time to release.`);
+    if(s==='grant' && cfg.contact!==recContact()) out.push(`Because the lock is on ${cfg.contact} instead of ${recContact()}, the unlock logic is inverted: the door is unlocked at rest and locks only while access is granted.`);
+    return out;
+  }
+
+  // ---------- checks ----------
+  function checks(){
+    const L=LOCKS[cfg.lock], list=[], safe=L.safe, hub=HUBS[cfg.hub];
+    const add=(t,b,m)=>list.push([t,b,m]);
+    // contact
+    if(cfg.contact===recContact()) add('ok','Relay contact',`${cfg.contact} matches a ${safe?'fail-safe':'fail-secure'} lock.`);
+    else add('bad','Relay contact',`A ${safe?'fail-safe':'fail-secure'} lock belongs on ${recContact()}. On ${cfg.contact} the door is unlocked at rest and locks only during a grant.`);
+    // voltage match
+    const V = supplyNominal();
+    if(cfg.supply==='hub' && cfg.lockV===24) add('bad','Supply voltage','The hub’s powered terminal is 12V only. A 24V lock needs the dry terminal and a 24V supply.');
+    else if(V!==cfg.lockV) add('bad','Supply voltage',`A ${V}V supply on a ${cfg.lockV}V lock ${V>cfg.lockV?'will overheat or damage it':'won’t operate it reliably'}. Match the PSU to the lock, or change the lock’s voltage jumper.`);
+    else add('ok','Supply voltage',`${V}V supply matches the ${cfg.lockV}V lock.`);
+    // current
+    if(cfg.supply==='hub'){
+      const I = cfg.amps*(12/cfg.lockV);
+      if(I>1.0) add('bad','Hub current limit',`${fmt(I)} A exceeds the 1A powered terminal. Move to the dry terminal with an external supply (Ubiquiti recommends 24V for double maglocks).`);
+      else if(I>0.8) add('warn','Hub current limit',`${fmt(I)} A leaves little headroom on the 1A powered terminal. Consider the dry terminal with an external supply.`);
+      else add('ok','Hub current limit',`${fmt(I)} A is within the 1A powered terminal.`);
+    } else {
+      const ld=psuLoad(), I=ld.total, pct=I/cfg.psuA;
+      const parts=[`lock ${fmt(ld.lock)} A`]; if(ld.pir) parts.push(`motion sensor about ${fmt(ld.pir)} A`); if(ld.siren) parts.push(`${SIREN_TYPES[cfg.sirenType].name.toLowerCase()} ${fmt(ld.siren)} A`);
+      const det = parts.length>1?` (${parts.join(', ')})`:'';
+      if(pct>1) add('bad','PSU capacity',`${fmt(I)} A total${det} exceeds the ${cfg.psuA} A supply.`);
+      else if(pct>0.8) add('warn','PSU capacity',`${fmt(I)} A total${det} is ${Math.round(pct*100)}% of the ${cfg.psuA} A supply. Size for 80% or less.`);
+      else add('ok','PSU capacity',`${fmt(I)} A total${det} is ${Math.round(pct*100)}% of the ${cfg.psuA} A supply.`);
+      const IL = ld.lock;
+      if(L.only24) add('ok','Dry relay rating','The hub’s dry relay only signals the exit device supply’s control input; the supply switches the motor current.');
+      else if(IL>DRY_MAX_A || cfg.psuV>DRY_MAX_V) add('bad','Dry relay rating',`${fmt(IL)} A at ${cfg.psuV}V is beyond the dry relay’s rating (the original UA-Hub was rated 30V DC, 1A). Switch the load through an interposing relay or the supply’s control input.`);
+      else add('ok','Dry relay rating',`${fmt(IL)} A at ${cfg.psuV}V is within the dry relay’s rating (30V DC, 1A on the original UA-Hub; confirm for your hub).`);
+    }
+    if(cfg.supply==='psu'){
+      add('ok','Dry wiring', L.only24?`The hub’s dry ${cfg.contact} and COM go to the exit device supply’s control input; the supply powers the exit device.`:`PSU + to the hub’s dry COM, relay ${cfg.contact} to lock +, lock − back to PSU −.`);
+      add('info','Listed power supply','Use an access control supply listed to UL 294 or UL 603 with Class 2 outputs. If it has a fire alarm input, that’s a clean way to drop the locks on alarm.');
+    }
+    // drop
+    const rr = dropRatio();
+    if(V===cfg.lockV){
+      const msg=`${fmt(cfg.run,0)} ft of ${cfg.gauge} AWG gives ${fmt(loopOhms(),2)} Ω round trip, leaving ${Math.round(rr*100)}% of rated voltage at the lock.`;
+      if(rr<0.8) add('bad','Voltage drop', msg+' Use heavier wire, shorten the run, or move to 24V.');
+      else if(rr<0.9) add('warn','Voltage drop', msg+' Aim for 90% or better: heavier gauge or a 24V lock helps.');
+      else add('ok','Voltage drop', msg);
+    }
+    // suppression
+    if(L.inductive && !cfg.suppression) add('warn','Suppression','Add a diode (band toward +) or MOV across the lock terminals unless the lock has one built in. Switching spikes can damage relay contacts.');
+    else if(cfg.suppression && L.inductive) add('ok','Suppression','Diode or MOV fitted across the lock.');
+    // egress
+    if(cfg.egress){
+      if(cfg.lock==='mag'||cfg.lock==='mag2'){
+        if(!(cfg.rexPir&&cfg.pirDirect)) add('bad','Maglock egress sensor','Maglocks on egress doors typically need a motion sensor that cuts lock power directly, not only through the hub.');
+        else add('ok','Maglock egress sensor','Motion sensor releases the lock directly.');
+        if(!cfg.manualRelease) add('bad','Manual release','Maglocks typically also need a push-to-exit button within reach of the door that cuts lock power directly.');
+        else add('ok','Manual release','Push-to-exit button breaks lock power independent of the hub.');
+      }
+      if(safe){
+        if(!cfg.fire) add('warn','Fire release','Fail-safe locks on egress paths usually must release on fire alarm. Add the fire panel relay in series, if the AHJ requires it.');
+        else add('ok','Fire release', cfg.fireMethod==='psu'&&cfg.supply==='psu'&&cfg.psuType!=='basic'?'The fire panel drops the lock supply through its fire input.':'Fire panel relay opens the lock circuit on alarm.');
+      } else add('info','Free egress','Fail-secure locks stay locked on power loss. Make sure the inside lever or panic bar always opens the door mechanically.');
+      if(safe && !cfg.rexButton && !cfg.rexPir) add('bad','Exit path','A fail-safe lock with no exit device traps people on the secure side.');
+    }
+    // dps
+    if(!cfg.dps) add('warn','Door position sensor','Without a DPS the hub can’t report forced or held-open doors.');
+    else {
+      if(cfg.dpsForm!==cfg.dpsTrigger) add('bad','Door sensor setting',`The sensor uses its ${cfg.dpsForm} contact but Access is set to ${cfg.dpsTrigger==='NC'?'open-active':'close-active'}. The hub will read the door backwards.`);
+      else if(cfg.dpsForm==='NO') add('warn','Door sensor setting','NO contact with close-active works, but a cut wire then looks like a closed door. NC with open-active fails safe: a cut wire reports open.');
+      else add('ok','Door sensor setting','NC contact with the open-active setting: a cut wire shows as an open door.');
+      if(cfg.dpsType==='bond') add('info','Bond sensor','A bond sensor reports secure only when the door is shut and the maglock is holding. It also opens on every unlock, so pair releases with an exit request signal.');
+      else if(cfg.dpsType==='wide') add('info','Door sensor type','Wide-gap contacts are meant for overhead and sliding doors with loose alignment. A standard recessed contact is more tamper-resistant on a swing door.');
+      else if(cfg.dpsType==='hss') add('ok','Door sensor type','High-security contacts resist defeat by an outside magnet.');
+      else add('ok','Door sensor type',`${DPS_TYPES[cfg.dpsType]}. Keep the magnet within its rated gap.`);
+    }
+    // pairs
+    if(cfg.doors==='double'){
+      if(cfg.lock==='mag') add('bad','Pair of doors','A single maglock only holds one leaf. Use a double-door maglock or one magnet per leaf.');
+      else if(cfg.lock==='mag2') add('ok','Pair of doors','One magnet per leaf, wired in parallel on the same circuit.');
+      else if(cfg.lock==='elr') add('info','Pair of doors','Both exit devices need latch retraction, usually vertical rod or mullion devices, powered from the same supply.');
+      else add('info','Pair of doors','The lock is on the active leaf. Make sure the inactive leaf is held by flush bolts or a mullion, and add a coordinator if both leaves have closers.');
+      if(cfg.dps) add('info','Door sensor per leaf','On a pair, put a door contact on each leaf and wire them in series so either leaf opening reports the door as open.');
+    }
+    // fire method
+    if(cfg.fire && safe){
+      if(cfg.fireMethod==='psu' && (cfg.supply!=='psu' || cfg.psuType==='basic')) add('bad','Fire release method','The PSU fire input method needs dry mode and a supply with a fire alarm input. Use a supply with an access control module, or wire the relay in series.');
+      else if(cfg.fireMethod==='psu') add('ok','Fire release method','The fire panel opens the supply’s fire input, dropping every lock output on it at once.');
+      else add('ok','Fire release method','Fire panel relay contact is in series with lock +.');
+    }
+    if(cfg.manualRelease && safe && cfg.dps && !cfg.mrRex) add('warn','Push-to-exit signaling','The push-to-exit only cuts power, so the hub logs a forced door each time it’s used. Use a double-pole button and wire its second contact to the exit request input.');
+    if(L.leaf) add('info','Power through the door','Electrified locksets mount in the door, so power has to cross the hinge. Use an electric power transfer hinge or door loop rather than exposed cable, and land the lock’s RX switch, if fitted, on the exit request input.');
+    // exit device lock
+    if(L.only24 && cfg.lockV!==24) add('bad','Exit device voltage','Latch retraction exit devices in this simulator run on 24V.');
+    if(L.only24 && cfg.psuType!=='mfr') add('warn','Exit device supply','Latch retraction motors have a high inrush current. Use the exit device maker’s supply (for example a Von Duprin PS900-series) as the manufacturer specifies.');
+    // operator
+    if(cfg.operator && hub.aux){
+      const min=(cfg.lock==='mag'||cfg.lock==='mag2')?1:0.5;
+      if(cfg.opDelay<min) add('warn','Operator delay',`${fmt(cfg.opDelay,2)} s may not give the ${L.noun} time to release. Use at least ${min} s${min===1?' for maglocks, which hold briefly from residual magnetism':''}.`);
+      else add('ok','Operator delay',`${fmt(cfg.opDelay,2)} s lets the ${L.noun} release before the operator pushes.`);
+      add('info','Operator standard', cfg.opType==='low'?'Low-energy operators (ANSI A156.19) move slowly and generally don’t need guarding sensors. Push plates must be within reach and clear of the swing.':'Full-power operators (ANSI A156.10) need presence and motion sensors and guide rails; they’re normally installed by the operator manufacturer’s trained technicians and checked by an AAADM-certified inspector.');
+    }
+    // siren
+    if(cfg.siren && hub.aux){
+      if(cfg.sirenDrive==='relay' && cfg.supply!=='psu') add('bad','Siren power','Relay drive needs an external supply to switch.');
+      else if(cfg.sirenDrive==='aux' && cfg.sirenAmps>AUX_SIREN_MAX) add('bad','Siren power',`${fmt(cfg.sirenAmps)} A is over the AUX siren output’s rating (0.33 A on the original UA-Hub). Drive it through a relay and an external supply.`);
+      else add('ok','Siren power', cfg.sirenDrive==='aux'?`${fmt(cfg.sirenAmps)} A is within the AUX siren output.`:'The hub’s siren output drives a relay that switches the external supply.');
+      add('info','Siren color','Use amber or blue strobes and a distinct tone, labeled for door alarms. Red strobes and horn tones read as fire alarm signals and can confuse occupants.');
+    }
+    // hub power dependency
+    if(safe && cfg.supply==='hub' && !cfg.switchUps) add('info','Power dependency','This lock gets power from the hub, so it unlocks whenever the hub or its PoE switch goes down. Put the switch on a UPS if that’s not acceptable.');
+    if(safe && cfg.supply==='psu' && !cfg.battery) add('info','Power dependency','The door unlocks on a power cut because the PSU has no battery. That’s normal for egress doors; add a battery if the door must stay secure.');
+    if(!safe && cfg.supply==='psu' && !cfg.battery) add('info','Power dependency','On a power cut the door stays locked and badges can’t unlock it. Add a PSU battery if entry must keep working.');
+    return list;
+  }
+  const WHY = {
+    'Relay contact':'NC is connected at rest, so a fail-safe lock on NC stays powered (locked) until the hub unlocks. A fail-secure lock on NO gets power only while the hub unlocks.',
+    'Supply voltage':'Too little voltage and the lock won’t hold or release; too much and its coil overheats. Many locks have a 12/24V jumper, so check how it’s set.',
+    'Hub current limit':'The powered terminal is rated 1A and draws on the hub’s own PoE++ power. Running near the limit risks a weak lock or hub resets.',
+    'Dry relay rating':'Switching more current than a relay is rated for burns its contacts, and the lock eventually fails to lock or unlock.',
+    'PSU capacity':'A supply run near its limit runs hot and fails early. Leave headroom for inrush current and anything else it powers.',
+    'Voltage drop':'With low voltage a maglock holds with less force, and a strike may buzz instead of releasing.',
+    'Suppression':'A lock coil kicks back a voltage spike when it switches off. Over time that pits the relay contacts.',
+    'Maglock egress sensor':'A maglock has no handle to open it. If the hub or network fails, devices that cut lock power directly are the only way out.',
+    'Manual release':'A maglock has no handle to open it. A button that cuts power directly is the backup when the motion sensor doesn’t see someone.',
+    'Fire release':'People must be able to leave during a fire without a badge, so the fire panel cuts power to fail-safe locks.',
+    'Free egress':'Fail-secure locks only control the outside. The inside handle or panic bar is what lets people out.',
+    'Exit path':'With nothing on the secure side to release it, a fail-safe lock can trap people.',
+    'Door position sensor':'The hub only knows the door was opened if a sensor tells it.',
+    'Power dependency':'Decide what the door should do in an outage, then choose where its power comes from and what backs it up.',
+    'Dry wiring':'The dry relay has no voltage of its own. Wiring an external supply to the powered terminal instead back-feeds the hub and can damage it.',
+    'Pair of doors':'An unsecured inactive leaf lets someone open the pair without touching the lock.',
+    'Door sensor per leaf':'With one contact, the other leaf can be propped open without an alarm.',
+    'Door sensor setting':'If the contact and the setting disagree, the hub reports every closed door as open, and real alarms get lost in false ones.',
+    'Bond sensor':'Without a separate door contact, the hub can’t tell an unlocked-but-shut door from an open one.',
+    'Door sensor type':'The right sensor for the door type reduces false alarms and tampering.',
+    'Fire release method':'Fire release has to work every time, independent of the access control system, and the fire contractor has to sign off on it.',
+    'Push-to-exit signaling':'False forced-door alarms train people to ignore real ones.',
+    'Exit device voltage':'Latch retraction motors are designed for one supply voltage; the wrong one can stall or burn out the motor.',
+    'Exit device supply':'A general-purpose supply can sag or trip on the motor’s inrush, so the latch doesn’t fully retract.',
+    'Operator delay':'If the operator pushes before the lock releases, it strains the motor and the lock, and the door may not open.',
+    'Operator standard':'Automatic doors can injure people; the standard sets speed, force and sensor requirements.',
+    'Siren power':'Overloading the hub’s output can shut down the output or damage the hub.',
+    'Siren color':'Occupants should be able to tell a door alarm from a fire alarm instantly.',
+    'Listed power supply':'Listed access control supplies have power-limited outputs, and a fire alarm input that can drop every lock at once.'
+  };
+  const FIXES = {
+    'Relay contact':()=>{ cfg.contact=recContact(); },
+    'Supply voltage':()=>{ if(cfg.supply==='hub'&&cfg.lockV===24){ cfg.supply='psu'; } cfg.psuV=cfg.lockV; },
+    'Hub current limit':()=>{ cfg.supply='psu'; cfg.psuV=cfg.lockV; },
+    'PSU capacity':()=>{ const need=psuLoad().total/0.8; cfg.psuA=[1,2,3,4,6].find(a=>a>=need)||6; },
+    'Voltage drop':()=>{ if(cfg.gauge!==18) cfg.gauge=18; else if(cfg.lockV===12){ cfg.lockV=24; cfg.amps=LOCKS[cfg.lock].amps[24]; cfg.supply='psu'; cfg.psuV=24; } },
+    'Suppression':()=>{ cfg.suppression=true; },
+    'Maglock egress sensor':()=>{ cfg.rexPir=true; cfg.pirDirect=true; },
+    'Manual release':()=>{ cfg.manualRelease=true; },
+    'Fire release':()=>{ cfg.fire=true; },
+    'Exit path':()=>{ cfg.rexButton=true; },
+    'Door position sensor':()=>{ cfg.dps=true; },
+    'Door sensor setting':()=>{ cfg.dpsForm='NC'; cfg.dpsTrigger='NC'; },
+    'Fire release method':()=>{ cfg.fireMethod='series'; },
+    'Push-to-exit signaling':()=>{ cfg.mrRex=true; },
+    'Exit device voltage':()=>{ cfg.lockV=24; cfg.psuV=24; },
+    'Exit device supply':()=>{ cfg.psuType='mfr'; cfg.psuBrand=0; },
+    'Operator delay':()=>{ cfg.opDelay=(cfg.lock==='mag'||cfg.lock==='mag2')?1:0.5; },
+    'Siren power':()=>{ if(cfg.supply==='psu') cfg.sirenDrive='relay'; else { cfg.sirenAmps=Math.min(cfg.sirenAmps,AUX_SIREN_MAX); cfg.sirenDrive='aux'; } },
+    'Pair of doors':()=>{ cfg.lock='mag2'; cfg.amps=LOCKS.mag2.amps[cfg.lockV]; },
+    'Dry relay rating':()=>{ cfg.lockV=24; cfg.amps=LOCKS[cfg.lock].amps[24]; cfg.psuV=24; }
+  };
+  function issueCount(){ const l=checks(); return {bad:l.filter(c=>c[0]==='bad').length, warn:l.filter(c=>c[0]==='warn').length}; }
+  function renderChecks(){
+    const icon={ok:'✓',warn:'!',bad:'✕',info:'i'};
+    const all=checks(), order={bad:0,warn:1,info:2,ok:3};
+    const ic=issueCount();
+    document.getElementById('ckFilter').innerHTML = [['issues',`Needs attention (${ic.bad+ic.warn})`],['all',`All checks (${all.length})`]].map(([v,l])=>`<button type="button" class="btn small ${UI.ckFilter===v?'tog':''}" aria-pressed="${UI.ckFilter===v}" data-ckf="${v}">${l}</button>`).join('');
+    let list = all.slice().sort((a,b)=>order[a[0]]-order[b[0]]);
+    if(UI.ckFilter==='issues') list=list.filter(c=>c[0]==='bad'||c[0]==='warn');
+    const FX={}; all.forEach(([t,b])=>{ if((t==='bad'||t==='warn')&&!(b in FX)) FX[b]=canFix(b); }); const fixable=Object.values(FX).filter(Boolean).length, FA=document.getElementById('fixAll'); FA.hidden=!fixable; FA.textContent=fixable>1?`Fix ${fixable} automatically`:'Fix automatically';
+    document.getElementById('checks').innerHTML = list.length ? list.map(([t,b,m])=>`<li class="${t}"><span class="ic" aria-label="${t}">${icon[t]}</span><span><b>${b}.</b> ${m}${WHY[b]?`<span class="why">Why it matters: ${WHY[b]}</span>`:''}${(t==='bad'||t==='warn')&&FX[b]?`<br><button type="button" class="btn small" data-fix="${b}">Fix this</button>`:''}</span></li>`).join('')
+      : `<li class="ok"><span class="ic">✓</span><span><b>No issues.</b> This design follows every best practice the simulator checks.</span></li>`;
+  }
+
+  // ---------- wiring list ----------
+  function renderWiring(){
+    const L=LOCKS[cfg.lock], safe=L.safe, dry=cfg.supply==='psu', hub=HUBS[cfg.hub];
+    const rows=[];
+    const g=`${cfg.gauge}/2`;
+    const sw=c=>c.map(x=>`<span class="sw ${x}"></span>`).join('');
+    rows.push([['eth'],'PoE++ switch port (802.3bt)','Hub PoE++ in','T568B both ends','Cat6','Same network as the console running UniFi Access.']);
+    rows.push([['eth'],'Hub PoE out','G3 Reader','T568B both ends','Cat6','Reader is powered by the hub; cable it directly to the hub.']);
+    const chain=[];
+    if(cfg.fire&&safe&&!(cfg.fireMethod==='psu'&&dry&&cfg.psuType!=='basic')) chain.push('fire panel relay (C to NC)');
+    if(cfg.manualRelease&&safe) chain.push('push-to-exit button (C to NC)');
+    if(cfg.pirDirect&&cfg.rexPir&&safe) chain.push('motion sensor release (C to NC)');
+    const via = chain.length?`, through ${chain.join(', then ')}`:'';
+    if(cfg.lock==='elr'){
+      rows.push([['grn','wht'],'Hub LOCK dry NO, COM','Exit device supply’s control (trigger) input','Green to NO, white to COM','18/2 AWG','Dry contact only. The hub signals the supply; it never carries the motor current.']);
+      rows.push([['red','blk'],'Exit device supply output','Exit device, through the power transfer','Per the maker’s harness colors','Per the maker’s instructions, often 18 AWG or heavier','Follow the exit device maker’s wiring diagram for the latch retraction and RX switch leads.']);
+    } else if(dry){
+      rows.push([['red'],`PSU + (${cfg.psuV}V)`,'Hub LOCK dry COM','Red',`${g} AWG, supply-to-hub cable`,'Supply feeds the relay common.']);
+      rows.push([['blk'],'PSU −','Lock return, joined with the lock cable’s black','Black',`${g} AWG, supply-to-hub cable`,'Join with a terminal block or listed connector at the hub. If the supply sits right beside the hub, the lock cable’s black can land on PSU − directly instead.']);
+      rows.push([['red'],`Hub LOCK dry ${cfg.contact}`,'Lock + lead','Red',`${g} AWG, lock cable`,`Switched positive${via}.`]);
+      rows.push([['blk'],'Lock − lead','PSU − (through the supply-to-hub black)','Black',`${g} AWG, lock cable`,'Return goes to the supply, never to the hub’s dry terminal.']);
+    } else {
+      rows.push([['red'],`Hub LOCK powered ${cfg.contact}`,'Lock + lead','Red',`${g} AWG, lock cable`,`12V positive${via}.`]);
+      rows.push([['blk'],'Lock − lead','Hub LOCK powered COM','Black',`${g} AWG, lock cable`,'COM is ground on the powered terminal.']);
+    }
+    if(cfg.suppression && cfg.lock!=='elr') rows.push([['blk'],'Diode across lock','Lock + and −','Band to red (+)','1N4007 or MOV','Mount at the lock, not the hub.']);
+    if(cfg.rexButton) rows.push([['grn','wht'],'Exit button NO, COM','Hub exit request +, −','Green to NO and +, white to COM and −','22/2 AWG','Momentary, normally open.']);
+    if(cfg.rexPir){
+      rows.push([['grn','wht'],'Motion sensor relay NO, C','Hub exit request +, −','Green to NO and +, white to C and −','22/4 AWG (pair 1)','In parallel with any exit button.']);
+      rows.push([['red','blk'],'Motion sensor power +, −',dry?`PSU + and − (if the sensor accepts ${cfg.psuV}V)`:'12V auxiliary supply','Red +, black −','22/4 AWG (pair 2)','Check the sensor’s voltage range.']);
+      if(cfg.pirDirect&&safe) rows.push([['red','blk'],'Motion sensor second relay C, NC','In series with lock +','Red in from the hub side; black, re-marked with red tape at both ends, out toward the lock','18/2 AWG','Releases the lock directly; needs a two-relay sensor or a separate release relay.']);
+    }
+    if(cfg.manualRelease&&safe) rows.push([['red','blk'],'Push-to-exit C, NC','In series with lock +','Red in from the hub side; black, re-marked with red tape at both ends, out toward the lock','18/2 AWG','Breaks lock power directly. Many codes call for a 30-second release time.']);
+    const fireViaPsu = cfg.fire&&safe&&cfg.fireMethod==='psu'&&dry&&cfg.psuType!=='basic';
+    if(cfg.fire&&safe&&!fireViaPsu) rows.push([['red'],`Fire panel relay C, NC (${BRANDS.fire[cfg.fireBrand]} panel)`,'In series with lock +','Red in from the hub side; black, re-marked with red tape at both ends, out toward the lock','18/2 AWG','Supervision and wiring method per the fire alarm contractor and AHJ.']);
+    if(fireViaPsu) rows.push([['grn','wht'],`Fire panel relay C, NC (${BRANDS.fire[cfg.fireBrand]} panel)`,'PSU fire alarm input (FAI)','Green and white','18/2 AWG, red jacket if required','Remove the factory jumper on the FAI. Set latching or non-latching to match the fire contractor’s plan.']);
+    if(cfg.manualRelease&&safe&&cfg.mrRex) rows.push([['grn','wht'],'Push-to-exit second contact NO, C','Hub exit request +, −','Green to NO and +, white to C and −','22/2 AWG','Shunts the forced-door alarm when the button is used.']);
+    if(cfg.dps){ const bond=cfg.dpsType==='bond';
+      rows.push([['grn','wht'],`${bond?'Maglock bond sensor':'Door contact'} ${cfg.dpsForm}, COM`,'Hub door position +, −',`Green to ${cfg.dpsForm} and +, white to COM and −`,'22/2 AWG',`Set the Access trigger to ${cfg.dpsForm==='NC'?'open-active':'close-active'}.`]); }
+    if(hub.aux&&cfg.operator) rows.push([['grn','wht'],'Hub AUX door operator NO, COM','Operator activation input','Green to NO, white to COM','18/2 AWG',`Dry contact; the operator keeps its own power. Set a ${fmt(cfg.opDelay,2)} s opening delay.`]);
+    if(hub.aux&&cfg.siren){
+      if(cfg.sirenDrive==='aux') rows.push([['red','blk'],'Hub AUX siren NO, COM',`${SIREN_TYPES[cfg.sirenType].name} +, −`,'Red to NO and +, black to COM and −','18/2 AWG','Already 12V. Never add an external supply here.']);
+      else { rows.push([['red','blk'],'Hub AUX siren NO, COM','12V relay coil +, −','Red to NO and coil +, black to COM and coil −','18/2 AWG','The hub output only energizes the relay coil.']);
+        rows.push([['red','blk'],`PSU + through relay C to NO`,`${SIREN_TYPES[cfg.sirenType].name} +; its − to PSU −`,'Red switched +, black return','18/2 AWG',`Check the device runs on ${cfg.psuV}V.`]); }
+    }
+    document.getElementById('wiring').innerHTML = `<thead><tr><th>From</th><th>To</th><th>Wire colors</th><th>Cable</th><th>Notes</th></tr></thead><tbody>${rows.map(([c,a,b,col,w,n])=>`<tr><td>${a}</td><td>${b}</td><td><span class="colors">${sw(c)}</span>${col}</td><td>${w}</td><td>${n}</td></tr>`).join('')}</tbody>`;
+  }
+
+  // ---------- equipment ----------
+  function renderEquip(){
+    const L=LOCKS[cfg.lock], safe=L.safe, dry=cfg.supply==='psu', hub=HUBS[cfg.hub];
+    const row=(cat,type,list,pick,spec)=>`<tr><td>${cat}</td><td>${type}</td><td>${spec}</td><td>${list.map((b,i)=>i===pick?`<span class="pick">${b}</span>`:b).join('; ')}</td></tr>`;
+    const rows=[];
+    rows.push(row('Hub',hub.name,[hub.model],0,hub.aux?'PoE++ in, lock (powered and dry), AUX outputs':'PoE++ in, one lock terminal, 2 inputs'));
+    rows.push(row('Reader','G3 Reader',['UniFi G3 Reader, G3 Reader Flex, G3 Reader Pro'],0,'PoE from the hub'));
+    rows.push(row('Lock',L.name,BRANDS[lockBrandKey()],cfg.lockBrand,`${cfg.lockV}V DC, about ${fmt(cfg.amps)} A`));
+    if(dry) rows.push(row('Power supply',PSU_TYPES[cfg.psuType],BRANDS['psu_'+cfg.psuType],cfg.psuBrand,`${cfg.psuV}V DC, ${cfg.psuA} A${cfg.battery?', with battery':''}`));
+    if(cfg.rexButton) rows.push(row('Exit button','Momentary NO push button',BRANDS.btn,cfg.btnBrand,'Dry contact'));
+    if(cfg.rexPir) rows.push(row('Motion REX','PIR request-to-exit sensor',BRANDS.pir,cfg.pirBrand,cfg.pirDirect&&safe?'Two relays: one to the hub, one in the lock circuit':'Relay to the hub input; 12 or 24V power'));
+    if(cfg.manualRelease&&safe) rows.push(row('Push-to-exit','Manual release button with timer',BRANDS.mr,cfg.mrBrand,cfg.mrRex?'Double-pole: lock circuit and exit request':'NC contact in the lock circuit'));
+    if(cfg.dps) rows.push(row('Door sensor',DPS_TYPES[cfg.dpsType],BRANDS['dps_'+cfg.dpsType],cfg.dpsBrand,`${cfg.dpsForm} contact`));
+    if(cfg.fire&&safe) rows.push(row('Fire alarm','Fire panel relay or control relay module',BRANDS.fire,cfg.fireBrand,cfg.fireMethod==='psu'&&dry&&cfg.psuType!=='basic'?'Dry contact to the PSU fire input':'Dry contact in series with lock +'));
+    if(hub.aux&&cfg.operator){ rows.push(row('Door operator',OP_TYPES[cfg.opType],BRANDS.op,cfg.opBrand,`Dry activation input, ${fmt(cfg.opDelay,2)} s delay`)); rows.push(row('Actuators','Push plates or wave switches',BRANDS.act,cfg.actBrand,'Wired to the operator')); }
+    if(hub.aux&&cfg.siren) rows.push(row('Alarm',SIREN_TYPES[cfg.sirenType].name,BRANDS.siren,cfg.sirenBrand,`${cfg.sirenDrive==='aux'?'12V':cfg.psuV+'V'}, about ${fmt(cfg.sirenAmps)} A`));
+    if(cfg.suppression && cfg.lock!=='elr') rows.push(row('Suppression','Diode or MOV',['1N4007 diode (or the MOV supplied with the lock)'],0,'Across the lock terminals'));
+    document.getElementById('equip').innerHTML = `<thead><tr><th>Device</th><th>Type</th><th>Spec for this door</th><th>Example products</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+  }
+
+  // ---------- site survey ----------
+  const survey = STORE.survey || {}; let SVSTAT={total:0,checked:0,no:0}; let STEPSTAT={total:0,done:0};
+  function surveyItems(){
+    const L=LOCKS[cfg.lock], safe=L.safe, dry=cfg.supply==='psu', hub=HUBS[cfg.hub];
+    const mag=cfg.lock==='mag'||cfg.lock==='mag2', strike=cfg.lock==='fsafe'||cfg.lock==='fsecure';
+    const G=[];
+    const g=(name,items)=>G.push([name,items.filter(Boolean)]);
+    const it=(id,q,how,pass,fix,tool)=>({id,q,how,pass,fix,tool});
+    g('Door and frame',[
+      it('swing','Door swings freely and doesn’t sag','Open the door to 90°, let it go, and watch the gap along the lock edge and head as it closes.','The gap is even (about 1/8 in) and nothing rubs; hinge screws are tight.','Tighten or replace hinge screws, shim or replace worn hinges, or have the door adjusted before any lock work.','Eyes, screwdriver'),
+      it('closes','Door closes and latches on its own','Open the door fully and release it. If there’s a closer, watch the final few inches.','It closes from any angle and stays shut without a push.','Adjust the closer’s latch speed or replace it. A door that doesn’t close on its own will never lock reliably.','Closer adjustment key'),
+      it('rated','Fire rating checked','Look for a label on the hinge edge of the door and inside the frame rabbet.','You know whether the opening is fire-rated, and any prep you plan is allowed on a rated opening.','On a rated opening, use listed hardware and factory or permitted field prep only. Get the AHJ or door supplier involved before drilling.','Flashlight'),
+      it('frame','Frame is square and solid','Check the frame with a level and tap along the jamb and header where hardware will mount.','Plumb and square; mounting points are solid metal, wood or reinforcement, not hollow trim.','Add reinforcement or blocking, or correct the frame before mounting hardware.','Level, tape measure'),
+      it('material','Door and frame material known','Identify the door (hollow metal, solid wood, aluminum storefront, glass) and frame type.','You’ve chosen mounting hardware and fasteners for that material.','Order the right brackets, glass kits or reinforcement.','Magnet, eyes'),
+    ]);
+    const lockItems=[];
+    if(strike) lockItems.push(
+      it('sprep','Frame has room for the strike body','Measure the jamb depth behind the strike location, and check the existing strike prep.','The jamb is deep enough for the strike’s body (see its spec sheet) and isn’t grout-filled at that spot.','Choose a shallower strike, plan for frame cutting, or core out grout before install day.','Tape measure, flashlight'),
+      it('slatch','Latch suits the strike','Note the latch type and throw (standard latch, deadlatch, or panic bar latch).','The strike model is rated for that latch, with the right lip length.','Pick a strike model for that latch, for example a rim strike for a surface panic bar.','Tape measure'),
+      it('salign','Latch lines up with the strike','Close the door slowly and watch where the latch meets the strike lip.','The latch lands centered with light pressure; the door isn’t pushed against the stop.','Adjust the door or strike position before installing the electric strike.','Eyes'));
+    if(mag) lockItems.push(
+      it('mhead','Header has room for the maglock','Measure the header and stop at the latch-side top corner on the secure side, and check the swing direction.','There’s a flat, solid mounting surface; you know whether you need L, Z or filler brackets for this swing.','Order the bracket kit that matches the header and swing.','Tape measure'),
+      it('marm','Door can take the armature','Check where the armature will bolt through the door, and whether the door is glass or narrow-stile.','The door is solid or reinforced at that spot, or a glass-door bracket is planned.','Add reinforcement or a glass-door kit.','Eyes, magnet'),
+      it('mclr','Nothing interferes with the maglock','Check the closer arm, stop and overhead holder at the lock location.','The closer arm and holder clear the magnet and armature through the full swing.','Relocate the closer or choose a different maglock position or bracket.','Eyes'));
+    if(cfg.lock==='bolt') lockItems.push(it('balign','Door and frame line up for the bolt','Close the door and check the gap and alignment where the bolt will throw.','Alignment holds within the bolt’s tolerance, even when someone pushes on the door.','Fix door sag or add a stabilizer before installing the bolt.','Tape measure'));
+    if(L.leaf) lockItems.push(
+      it('lprep','Door prep matches the lockset','Check the door for an existing mortise pocket or bored hole, the backset and the door thickness.',`Prep matches the ${cfg.lock.startsWith('cyl')?'cylindrical lock (typically a 2-1/8 in bore with 2-3/4 in backset)':'mortise lock'} on a door of the thickness it’s made for (commonly 1-3/4 in).`,'Order the correct prep, a door with factory prep, or a lock made for the existing prep.','Tape measure'),
+      it('ept','Path for power into the door','Check the hinge side for a place to fit an electric power transfer hinge or door loop, and whether wire can run inside the door.','There’s a hinge position for the transfer and a raceway or route to the lock.','Plan for a raceway, a factory-prepped door, or a surface door loop.','Fish tape, flashlight'));
+    if(cfg.lock==='elr') lockItems.push(it('elrdev','Exit device supports latch retraction','Find the exit device’s model on its label or rail.','It’s already electric latch retraction, or the maker offers a retrofit kit for it.','Quote a new electrified exit device.','Flashlight'));
+    lockItems.push(it('lspec','Lock voltage and current confirmed','Check the lock’s spec sheet or label.',`${cfg.lockV}V DC and about ${fmt(cfg.amps)} A, matching this simulation.`,'Update the settings on the left so the power checks are accurate.','Spec sheet'));
+    g('Lock',lockItems);
+    g('Cable paths',[
+      it('path','Cable route from hub to door exists','Look above the ceiling and into the frame where cables need to go.','Accessible ceiling, and a route into the frame that isn’t blocked by grout, concrete or firestopping you can’t restore.','Plan surface raceway, core drilling or firestopping, and add it to the quote.','Flashlight, fish tape, inspection camera'),
+      it('dist','Cable lengths are within limits',`Measure or estimate each run from the hub location.`,`Ethernet under 100 m (328 ft); the lock run is about ${fmt(cfg.run,0)} ft as set on the left.`,'Move the hub closer, or update the run length on the left and recheck voltage drop.','Tape measure or plans'),
+    ]);
+    g('Hub, reader and power',[
+      it('hubloc','Secure-side location for the hub','Find a spot on the secure side: above the ceiling, in the room, or in a nearby IDF.','It’s reachable for service, not on the unsecured side, and within cable limits.','Pick another location or add an enclosure.','Flashlight'),
+      it('poe','PoE++ port available','Check the switch for a free 802.3bt port and enough PoE budget.','A free 802.3bt port with budget for the hub and its reader, on the network with the Access console.','Add a PoE++ switch or injector, or free up budget.','Switch dashboard'),
+      it('reader','Reader mounting spot','Check the entry-side wall or mullion at a reachable height.','Room for the reader at an accessible height, with a cable route behind it. On metal, plan to test read range before final mounting.','Use a mullion-width reader or a spacer, or move the location.','Tape measure'),
+      dry?it('psuloc','Mains power for the lock supply','Find a 120V outlet or circuit near where the supply will go.','A dedicated or clearly labeled circuit is available.','Get an electrician to add a circuit.','Outlet tester'):null,
+      (safe&&cfg.supply==='hub'&&!cfg.switchUps)?it('ups','Outage behavior agreed with the owner','Ask what the door should do when power fails.','The owner accepts that this fail-safe lock unlocks when the hub or switch loses power.','Add a UPS for the switch, or move to an external supply with a battery.','Conversation'):null,
+    ]);
+    const io=[];
+    if(cfg.dps) io.push(cfg.dpsType==='bond'?it('dpsb','Maglock has the bond sensor option','Check the maglock’s model number for the bond or status sensor option.','The lock includes the sensor and has leads for it.','Order the sensor version or add a separate door contact.','Spec sheet'):it('dpsloc','Room for the door contact','Check the frame head near the latch side, and whether it’s grout-filled.','A spot where the contact and magnet line up within the rated gap.','Use a surface contact or a different location.','Drill, flashlight'));
+    if(cfg.rexPir) io.push(it('pirloc','Motion sensor location','Look above the door on the secure side for a mounting spot.','Covers the approach to the door, and isn’t aimed at the door gap, HVAC vents or heaters.','Move the sensor or choose a different model.','Eyes'));
+    if(cfg.rexButton||(cfg.manualRelease&&safe)) io.push(it('btnloc','Button locations','Find spots for the exit and push-to-exit buttons on the secure side.','Within reach of the door at an accessible height, with a cable route.','Add a surface box or raceway.','Tape measure'));
+    if(cfg.fire&&safe) io.push(it('facp','Fire alarm relay available','Ask the fire alarm contractor about a spare relay or relay module and its location.','A relay is assigned to this door and the contractor is scheduled for the tie-in and test.','Get the fire alarm contractor to quote a relay module.','Conversation'));
+    if(hub.aux&&cfg.operator) io.push(it('opdoor','Door suits an automatic operator','Weigh or estimate the door, check its width, hinges and the header for mounting.','Within the operator’s rating; heavy-duty or continuous hinges; solid header; 120V power available.','Upgrade hinges, reinforce the header or choose a larger operator.','Tape measure'),
+      it('opplates','Push plate locations','Find spots on both sides, clear of the door swing.','Reachable locations with a cable route to the operator.','Use bollard-mounted or wireless push plates.','Tape measure'));
+    if(hub.aux&&cfg.siren) io.push(it('sirenloc','Alarm location','Find a spot where staff will see or hear the alarm.','Visible and audible from where staff work, away from fire alarm devices.','Pick another location.','Eyes'));
+    if(cfg.egress) io.push(it('ahj','Code and approvals',`Confirm what the AHJ requires for ${L.noun}s on this egress door.`,'Requirements are known and any permit or plan approval is in hand.','Contact the AHJ before ordering hardware.','Conversation'));
+    g('Devices and approvals',io);
+    return G;
+  }
+  function renderSurvey(){
+    const groups0=surveyItems(); const all=groups0.flatMap(([,i])=>i);
+    const keep = i => UI.svFilter==='all' || (UI.svFilter==='open' && !survey[i.id]) || (UI.svFilter==='no' && survey[i.id]==='no');
+    const groups = groups0.map(([n,items])=>[n,items.filter(keep)]);
+    const counts={ok:0,no:0,na:0}; all.forEach(i=>{ if(survey[i.id]) counts[survey[i.id]]++; });
+    const checked=counts.ok+counts.no+counts.na, blockers=all.filter(i=>survey[i.id]==='no');
+    const status = blockers.length?['bad','Not ready']:checked===all.length?['ok','Ready to install']:['warn','Survey in progress'];
+    document.getElementById('svSummary').innerHTML = `<span class="big" style="color:var(--${status[0]==='bad'?'bad':status[0]==='ok'?'ok':'warn'})">${status[1]}</span>
+      <span>${checked} of ${all.length} checked: ${counts.ok} ready, ${counts.no} not ready, ${counts.na} not applicable</span>
+      <span class="progress" aria-hidden="true"><i style="width:${all.length?Math.round(checked/all.length*100):0}%"></i></span>
+      ${blockers.length?`<ul>${blockers.map(b=>`<li><b>${b.q}:</b> ${b.fix}</li>`).join('')}</ul>`:''}`;
+    document.getElementById('svFilter').innerHTML = [['all','All'],['open',`Unchecked (${all.length-checked})`],['no',`Not ready (${counts.no})`]].map(([v,l])=>`<button type="button" class="btn small ${UI.svFilter===v?'tog':''}" aria-pressed="${UI.svFilter===v}" data-svf="${v}">${l}</button>`).join('');
+    SVSTAT={total:all.length, checked, no:counts.no};
+    document.getElementById('survey').innerHTML = groups.filter(([,i])=>i.length).length===0 ? '<p class="hint" style="padding:12px 0">Nothing to show for this filter.</p>' : groups.filter(([,i])=>i.length).map(([name,items])=>`<div class="svgroup"><h3>${name}</h3>${items.map(i=>`
+      <div class="svitem ${survey[i.id]==='no'?'no':''}"><div><div class="q">${i.q}</div>
+        <div class="d"><b>How to check:</b> ${i.how} <b>Ready when:</b> ${i.pass}${survey[i.id]==='no'?` <b>To fix:</b> ${i.fix}`:''} <b>Tools:</b> ${i.tool}.</div></div>
+        <div class="svbtns" role="group" aria-label="${i.q}">${[['ok','Ready'],['no','Not ready'],['na','N/A']].map(([v,l])=>`<button type="button" data-sv="${i.id}" data-v="${v}" aria-pressed="${survey[i.id]===v}">${l}</button>`).join('')}</div></div>`).join('')}</div>`).join('');
+  }
+  document.getElementById('survey').addEventListener('click', e=>{ const b=e.target.closest('[data-sv]'); if(!b) return; const id=b.dataset.sv;
+    survey[id] = survey[id]===b.dataset.v ? undefined : b.dataset.v; if(survey[id]===undefined) delete survey[id]; renderSurvey(); renderChrome(); save();
+    const nb=document.querySelector(`[data-sv="${id}"][data-v="${b.dataset.v}"]`); if(nb) nb.focus(); });
+
+  // ---------- install guide ----------
+  const done = STORE.done || {};
+  const TRIGGER = {
+    idle:'Door closed, nobody at it.', grant:'Present a valid credential at the reader, or unlock from the UniFi Access app.',
+    rexButton:'Press the exit button.', rexPir:'Walk toward the door from the secure side.',
+    manual:'Press the push-to-exit button and hold it.', schedule:'Set a temporary unlock schedule in UniFi Access, then remove it.',
+    forced:'With the door locked, open it without a credential: key override, or the inside lever with exit devices bypassed.',
+    held:'Badge in, then prop the door open past the held-open time.',
+    fire:'With the fire alarm contractor, put the panel in test and trigger an alarm.',
+    power:'Switch off the circuit feeding the PoE switch and the lock supply.', hubOff:'Unplug the hub’s PoE++ cable.'
+  };
+  function renderInstall(){
+    const L=LOCKS[cfg.lock], safe=L.safe, dry=cfg.supply==='psu', hub=HUBS[cfg.hub];
+    const mag = cfg.lock==='mag'||cfg.lock==='mag2', strike = cfg.lock==='fsafe'||cfg.lock==='fsecure';
+    const idle=simulate('idle'), un=simulate('grant');
+    const rCoil = cfg.lockV/cfg.amps * (cfg.lock==='mag2'?1:1);
+    const V=v=>`${fmt(v,1)} V`;
+    const st=(r)=>`${r.locked?'locked':'unlocked'}, ${V(r.vLock)} at the lock`;
+    const fireViaPsu = cfg.fire&&safe&&cfg.fireMethod==='psu'&&dry&&cfg.psuType!=='basic';
+    const chainNames=[]; if(cfg.fire&&safe&&!fireViaPsu) chainNames.push('fire alarm relay'); if(cfg.manualRelease&&safe) chainNames.push('push-to-exit button'); if(cfg.pirDirect&&cfg.rexPir&&safe) chainNames.push('motion sensor release contact');
+    const via = chainNames.length?`, through the ${chainNames.join(', then the ')} (C in, NC out)`:'';
+
+    // tools
+    const tools=[
+      ['Digital multimeter','DC volts, resistance and continuity at every step. Use one with a 10A DC current range.'],
+      ['DC clamp meter','lock current without breaking the circuit (optional if your multimeter can measure amps in series).'],
+      ['Cat6 cable tester','wiremap and length on the hub and reader cables.'],
+      ['PoE tester (802.3bt)','confirming the switch port delivers PoE++ to the hub.'],
+      ['Tone generator and probe','identifying cables at the far end before terminating.'],
+      ['Wire strippers, 18–22 AWG','clean strip lengths on low-voltage conductors.'],
+      ['Ferrule crimper and ferrules','solid terminations of stranded wire in the hub’s terminal blocks.'],
+      ['Precision screwdriver','terminal block screws; don’t overtighten.'],
+      ['RJ45 crimper or punch-down tool','terminating Cat6 (T568B).'],
+      ['Label maker','labeling every cable at both ends with device and terminal.'],
+      ['Drill, bits, level and tape','mounting the hub, reader, sensors and lock hardware.'],
+      ['Fish tape or glow rods','pulling cable through walls and door frames.'],
+      ['Alligator test lead','briefly shorting an input to simulate a button or contact.'],
+      ['Phone or laptop with UniFi Access','adopting devices, unlocking remotely, and checking event logs.']
+    ];
+    if(strike) tools.push(['Strike template and router or chisel','cutting the frame pocket for the strike.']);
+    if(mag) tools.push(['Maglock bracket kit (L, Z or U as needed)','mounting the magnet and armature so they meet squarely.']);
+    if(L.leaf) tools.push(['Electric power transfer hinge or door loop','getting lock power from the frame into the door leaf.'],['Lock template and door prep kit','drilling or mortising the door for the lockset.']);
+    if(cfg.dps) tools.push(['Small magnet','testing the door contact before the door magnet is installed.']);
+    if(dry) tools.push(['Spare fuse and battery leads','the external power supply, per its manual.']);
+    document.getElementById('tools').innerHTML = tools.map(([t,u])=>`<li><b>${t}:</b> ${u}</li>`).join('');
+
+    // steps
+    const steps=[];
+    const egressNeeds=[]; if(safe&&cfg.egress){ if(mag) egressNeeds.push('a motion sensor that cuts lock power directly','a push-to-exit button that cuts lock power directly'); egressNeeds.push('fire alarm release'); }
+    steps.push({t:'Confirm the hardware and code requirements', tools:['Lock spec sheet','Precision screwdriver'],
+      d:[`Check the lock’s label or spec sheet: ${cfg.lockV}V DC, about ${fmt(cfg.amps)} A, ${safe?'fail-safe':'fail-secure'}.`,
+         `If the lock has a 12/24V jumper or DIP switch, set it to ${cfg.lockV}V now${strike?'. Many strikes also have a fail-safe/fail-secure setting; set it to '+(safe?'fail-safe':'fail-secure'):''}.`,
+         egressNeeds.length?`This is a fail-safe lock on an egress door. Confirm with the AHJ before you start; expect to need ${egressNeeds.join(', ')}.`:`Confirm the inside of the door always opens mechanically (lever or panic bar), since this lock stays locked without power.`],
+      v:[`Jumper or label reads <span class="expect">${cfg.lockV}V</span> and <span class="expect">${safe?'fail-safe':'fail-secure'}</span>.`, 'Every item on the parts list is on site before you drill.', 'The Survey tab shows <span class="expect">Ready to install</span>, with no items marked not ready.']});
+    const cables=[`Cat6 from the PoE++ switch to the hub location`, `Cat6 from the hub to the reader (entry side)`, `${cfg.gauge}/2 lock cable (red/black) from the hub to the lock, about ${fmt(cfg.run,0)} ft`];
+    if(dry) cables.push(`${cfg.gauge}/2 red/black from the power supply to the hub: red carries + to the dry COM, black brings the lock’s return back to the supply`);
+    if(cfg.dps) cables.push('22/2 green/white to the door contact');
+    if(cfg.rexButton) cables.push('22/2 green/white to the exit button');
+    if(cfg.rexPir) cables.push('22/4 to the motion sensor (green/white contact, red/black power)');
+    if(chainNames.length) cables.push(`an 18/2 to each of the ${chainNames.join(' and ')}. Both conductors carry lock +: red comes in from the hub side, and black goes out toward the lock, so re-mark that black with red tape at both ends`);
+    if(cfg.manualRelease&&safe&&cfg.mrRex) cables.push('a separate 22/2 green/white from the push-to-exit’s second contact to the hub’s exit request input');
+    if(fireViaPsu) cables.push('(fire alarm contractor) the fire panel relay cable to the supply’s fire alarm input');
+    if(hub.aux&&cfg.operator) cables.push('18/2 green/white to the door operator’s activation input');
+    if(hub.aux&&cfg.siren) cables.push('18/2 red/black to the siren');
+    steps.push({t:'Pull and label the cables', tools:['Fish tape or glow rods','Label maker','Tone generator and probe','Cat6 cable tester','Multimeter'],
+      d:[...cables.map(c=>'Pull '+c+'.'), 'Leave a 12–18 in service loop at the hub, and label both ends of every cable with the device and terminal.'],
+      v:['With the far ends apart, continuity between any two conductors of a cable reads <span class="expect">OL (open)</span>. A beep means a short or nicked jacket.',
+         `Twist the lock cable’s red and black together at the far end: the pair reads about <span class="expect">${fmt(loopOhms(),2)} Ω</span> at the hub end. Short your meter leads first and subtract that reading (or use relative mode); anything near 0 Ω after that is a pass.`,
+         'Each Cat6 run passes wiremap 1–8 on the tester and reads under 100 m (328 ft).']});
+    const mount=['Mount the hub on the secure side (above the ceiling or inside the room), on DIN rail or the wall, close to the door.','Mount the reader on the entry side at a reachable height (accessible reach is roughly 15–48 in above the floor; follow local code).'];
+    if(cfg.lock==='mag') mount.push('Mount the maglock on the secure side of the header at the latch-side corner. Fit the armature to the door with its sex bolt and rubber washers so it can pivot slightly and sit flat on the magnet.');
+    if(cfg.lock==='mag2') mount.push('Mount one maglock per leaf on the header (or a double unit centered), each armature on its own leaf. Wire both magnets in parallel on the same lock circuit: reds together to lock +, blacks together to lock −.');
+    if(strike) mount.push('Mark the frame with the strike template, cut the pocket, and fit the strike. Adjust the keeper so the latch drops in without the door pushing on it (no preload).');
+    if(cfg.lock==='bolt') mount.push('Mount the bolt in the frame header or jamb and the strike plate on the door so the bolt throws straight into it without binding.');
+    if(L.leaf) mount.push(`Prep the door with the ${cfg.lock.startsWith('cyl')?'cylindrical (bored) lock template':'mortise template'}, install the ${cfg.lock.endsWith('EL')?'EL (fail-safe)':'EU (fail-secure)'} lockset, and set its voltage if it’s selectable. Run the lock cable through an electric power transfer hinge or door loop from the frame into the door, and connect the lock’s harness. If the lock has an RX (request-to-exit) switch, bring those two leads out too and land them on the hub’s exit request input.`);
+    if(cfg.dps) mount.push({recessed:'Recess the door contact in the frame head near the latch side, with its magnet in the door directly opposite.', surface:'Mount the surface contact on the frame head on the secure side, with its magnet on the door, aligned and within the rated gap.', wide:'Mount the wide-gap contact on the floor or frame and its magnet on the door or curtain, per the maker’s gap rating.', hss:'Mount the high-security contact and its actuator in the frame and door exactly as the template shows; these are sensitive to alignment.', bond:'No separate contact: the bond sensor is inside the maglock. Bring its leads out with the lock cable.'}[cfg.dpsType]);
+    if(hub.aux&&cfg.operator) mount.push(`Install the ${OP_TYPES[cfg.opType].split(' (')[0].toLowerCase()} operator per its manual, and mount push plates on both sides within reach and clear of the door swing.`);
+    if(hub.aux&&cfg.siren) mount.push(`Mount the ${SIREN_TYPES[cfg.sirenType].name.toLowerCase()} on the secure side where staff will see or hear it, labeled as a door alarm.`);
+    if(cfg.rexPir) mount.push('Mount the motion sensor above the door on the secure side, aimed at people approaching the door, not at the gap or the door hardware, so it can’t be triggered from outside.');
+    if(cfg.manualRelease&&safe) mount.push('Mount the push-to-exit button within about 5 ft of the door at roughly 40–48 in above the floor, labeled “Push to exit” (check local code).');
+    if(cfg.rexButton) mount.push('Mount the exit button on the secure side within reach of the door.');
+    if(hub.aux&&cfg.operator) mount.push('Locate the door operator’s activation input terminals in its manual.');
+    const mv=[];
+    if(mag) mv.push('Armature sits flat on the magnet face with no visible gap at any edge.');
+    if(strike) mv.push('The door closes and latches without slamming, and the keeper moves freely by hand when the strike is unlocked.');
+    if(cfg.lock==='bolt') mv.push('The bolt throws and retracts by hand without rubbing the strike plate.');
+    if(L.leaf) mv.push('Lock pair continuity through the power transfer reads the same with the door open and closed; the lever and latch work smoothly by hand.');
+    if(cfg.dps && cfg.dpsType!=='bond') mv.push(`Door contact pair at the hub end, ${cfg.dpsForm} contact: <span class="expect">${cfg.dpsForm==='NC'?'about 0 Ω':'OL'}</span> with the door closed, <span class="expect">${cfg.dpsForm==='NC'?'OL':'about 0 Ω'}</span> with it open.`);
+    mv.push('Hub and reader are level and secure; no cables are pinched by the door.');
+    steps.push({t:'Mount the hub, reader and door hardware', tools:['Drill, bits, level and tape', strike?'Strike template and router':mag?'Maglock bracket kit':'Mounting hardware', ...(cfg.dps?['Small magnet','Multimeter']:[])], d:mount, v:mv});
+    if(dry) steps.push({t:'Install and check the power supply', tools:['Multimeter','Precision screwdriver'],
+      d:[`Mount the supply near the hub and set its output to ${cfg.psuV}V DC.`, cfg.battery?(cfg.psuV===24?'Connect two 12V batteries in series for 24V, observing polarity.':'Connect the 12V battery, observing polarity.'):'No battery is configured; the lock will follow mains power.', fireViaPsu?'Have the fire alarm contractor land the fire panel relay (C to NC) on the supply’s fire alarm input, replacing the factory jumper.':'Leave the outputs disconnected for now.'],
+      v:[`No-load output reads at or slightly above ${cfg.psuV}V: about <span class="expect">${fmt(cfg.psuV*0.95,1)}–${fmt(cfg.psuV*1.05,1)} V</span>, or up to about <span class="expect">${cfg.psuV===24?'27.6':'13.8'} V</span> on supplies that float-charge a battery. Confirm the lock’s spec sheet allows that voltage.`, ...(fireViaPsu?['With the fire contractor present, open the fire input: lock outputs read <span class="expect">0 V</span>, and return after the panel and supply are reset.']:[]), ...(cfg.battery?['Each charged 12V battery reads <span class="expect">12.6 V or more</span>.']:[])]});
+    const term = cfg.lock==='elr'
+      ? ['Green from the hub’s dry lock NO and white from its COM to the exit device supply’s control (trigger) input. The hub only signals the supply.', 'Wire the supply’s output to the exit device through the power transfer exactly as the exit device maker’s diagram shows.', 'Land the exit device’s RX switch leads on the hub’s exit request input if it has them.']
+      : dry
+      ? [`Red from the supply’s + to the hub’s dry lock COM.`, `Red from the hub’s dry lock ${cfg.contact} to the lock’s + lead${via}.`, `Black from the lock’s − lead back to the supply’s −, joined with the black of the supply-to-hub cable at a terminal block (or landed directly on PSU − if the supply is beside the hub).`, 'Use only the dry terminal’s COM and its NC or NO. Leave the hub’s powered lock terminal empty, and never connect the supply to it.']
+      : [`Red from the hub’s powered lock ${cfg.contact} to the lock’s + lead${via}.`, 'Black from the lock’s − lead to the hub’s powered lock COM, which is ground.'];
+    if(chainNames.length && cfg.lock!=='elr') term.push('At each series device, land the incoming red on C and the outgoing re-marked black on NC, so both legs stay part of lock +.');
+    if(cfg.suppression && cfg.lock!=='elr') term.push('Fit the diode across the lock’s terminals at the lock, band toward red (+).');
+    term.push('Ferrule every stranded conductor and give each a light tug after tightening.');
+    steps.push({t:'Terminate the lock circuit with power off', tools:['Wire strippers','Ferrule crimper and ferrules','Precision screwdriver','Multimeter'], d:term,
+      v:[...(cfg.lock==='elr'?['Skip coil resistance checks: the exit device’s motor and electronics won’t read like a simple coil. Follow the maker’s checkout procedure instead.']:[
+         `Lock leads alone, disconnected: about <span class="expect">${fmt(rCoil,0)} Ω</span> across the coil (from ${cfg.lockV}V ÷ ${fmt(cfg.amps)} A; allow ±20%). Near 0 Ω is a short; OL is an open coil or loose wire.${LOCKS[cfg.lock].leaf?' Electrified locksets with built-in electronics may not read this way; use the spec sheet’s value if it lists one.':''}`,
+         `With the supply off and the lock pair lifted off the ${dry?'hub and supply':'hub'} terminals, measure the pair at the hub end, red probe on red: about <span class="expect">${fmt(rCoil+loopOhms(),0)} Ω</span>${chainNames.length?' with every series device at rest (closed)':''}. ${cfg.suppression?'Reversing the probes reads lower because of the diode; that’s expected.':''}`]),
+         'Each lock wire to the metal door frame reads <span class="expect">OL</span> (no ground fault).',
+         ...(dry?[`With the hub and supply both off and the wires lifted, the hub’s dry COM to NC beeps; COM to NO reads OL.`]:[])]});
+    const io=[];
+    if(cfg.rexButton) io.push('Exit button: green from NO to exit request +, white from COM to exit request −.');
+    if(cfg.rexPir) io.push(`Motion sensor: green/white from its relay NO and C to the exit request input (parallel with any button); red/black to ${dry?'the supply if the sensor accepts '+cfg.psuV+'V, otherwise a 12V supply':'a 12V supply'}.`);
+    if(cfg.dps) io.push(`${cfg.dpsType==='bond'?'Bond sensor':'Door contact'}: green from ${cfg.dpsForm} to door position +, white from COM to door position −.`);
+    if(cfg.manualRelease&&safe&&cfg.mrRex) io.push('Push-to-exit second contact: green from NO to exit request +, white from C to exit request − (parallel with other exit devices).');
+    if(hub.aux&&cfg.operator) io.push('Door operator: green from AUX door operator NO, white from COM, to the operator’s activation input.');
+    if(hub.aux&&cfg.siren) io.push(cfg.sirenDrive==='aux'?`${SIREN_TYPES[cfg.sirenType].name}: red from AUX siren NO to its +, black from COM to its −. Don’t add an external supply.`:`Relay: hub AUX siren NO and COM to the 12V relay coil. Supply + through the relay’s C and NO to the ${SIREN_TYPES[cfg.sirenType].name.toLowerCase()}’s +, its − to supply −.`);
+    if(io.length) steps.push({t:'Terminate inputs and outputs', tools:['Wire strippers','Ferrule crimper and ferrules','Precision screwdriver','Multimeter'], d:io,
+      v:[...(cfg.rexButton?['Exit button pair, disconnected from the hub: <span class="expect">OL</span> released, <span class="expect">under 1 Ω</span> pressed.']:[]), ...(cfg.rexPir?['Motion sensor contact closes (and its LED lights) when you walk into its zone.']:[]), ...(cfg.dps?['Door contact: <span class="expect">about 0 Ω</span> closed, <span class="expect">OL</span> open.']:[]), ...(hub.aux&&cfg.operator?['Briefly short the operator input with a test lead: the operator cycles.']:[]), ...(hub.aux&&cfg.siren?[`Measure the ${SIREN_TYPES[cfg.sirenType].name.toLowerCase()}’s current with the clamp meter while it sounds: <span class="expect">about ${fmt(cfg.sirenAmps)} A</span>${cfg.sirenDrive==='aux'?', within the AUX rating':''}.`]:[])]});
+    steps.push({t:'Power up and adopt', tools:['PoE tester (802.3bt)','Phone or laptop with UniFi Access'],
+      d:['Plug the hub into an 802.3bt (PoE++) switch port and the reader into the hub’s PoE out.','Adopt the hub and reader in UniFi Access, assign them to the door, and update firmware.'],
+      v:['PoE tester on the hub cable reports <span class="expect">802.3bt</span> power.','Hub and reader LEDs go from white (pending adoption) to <span class="expect">steady blue</span>.']});
+    steps.push({t:'Measure the lock live', tools:['Multimeter','DC clamp meter'],
+      d:['Measure DC volts at the lock terminals, red probe on lock +.','Unlock from the UniFi Access app and measure again while it’s unlocked.'],
+      v:[`At rest: <span class="expect">${st(idle)}</span>.`, `Unlocking: <span class="expect">${st(un)}</span>.`,
+         `While the lock is powered it draws about <span class="expect">${fmt(cfg.amps)} A</span> (clamp the red wire).`,'A negative reading means red and black are swapped at one end.']});
+    steps.push({t:'Configure UniFi Access', tools:['Phone or laptop with UniFi Access'],
+      d:['Set the lock trigger duration (how long the door stays unlocked), commonly 3–7 seconds.', ...(cfg.dps?[`Set the door position trigger to ${cfg.dpsForm==='NC'?'open-active':'close-active'} and a held-open time.`]:[]), ...((cfg.rexButton||cfg.rexPir)?['Set the exit request input to Unlock Door.']:[]), ...(hub.aux&&cfg.operator?[`Set the door operator delay to ${fmt(cfg.opDelay,2)} s so the lock releases before the operator pushes.`]:[]), ...(hub.aux&&cfg.siren?['Choose which alarms trigger the siren.']:[]), 'Add the owner’s schedules and user groups.'],
+      v:['Each setting shows on the hub’s device page, and test events appear in the Access log.']});
+    steps.push({t:'Run the acceptance test', tools:['Multimeter','Phone or laptop with UniFi Access'],
+      d:['Work through every row of the acceptance table below and record the reading.','Coordinate the fire alarm test with the fire alarm contractor and the building owner.'],
+      v:['Every row matches its expected result and shows in the Access event log.']});
+    steps.push({t:'Document and hand off', tools:['Label maker','Phone camera'],
+      d:['Photograph every termination and the finished door.','Leave the wiring list and the acceptance readings with the owner.','Show the owner how to unlock remotely, add users and read the event log.'],
+      v:['Labels on both ends of every cable match the wiring list.']});
+
+    const nd = steps.filter(x=>done[x.t]).length; STEPSTAT={total:steps.length, done:nd};
+    document.getElementById('stepsProg').innerHTML = `<span class="big" style="color:var(--${nd===steps.length?'ok':'ink'})">${nd===steps.length?'All steps done':`Step ${Math.min(nd+1,steps.length)} of ${steps.length}`}</span><span>${nd} done</span><span class="progress" aria-hidden="true"><i style="width:${Math.round(nd/steps.length*100)}%"></i></span>`;
+    const cur = steps.findIndex(x=>!done[x.t]);
+    if(SVSTAT.no) document.getElementById('stepsProg').innerHTML += `<button type="button" class="chip bad" data-go="survey">Survey has ${SVSTAT.no} blocker${SVSTAT.no>1?'s':''}: resolve before starting →</button>`;
+    document.getElementById('steps').innerHTML = steps.map((x,i)=>`<li class="${done[x.t]?'done':''} ${i===cur?'current':''}">
+      <div class="step-h"><span class="num">${i+1}</span><h4>${x.t}</h4><label><input type="checkbox" data-step="${x.t}" ${done[x.t]?'checked':''}> Done</label></div>
+      <div class="stepgrid"><div><div class="sub">Do</div><ul class="plain">${x.d.map(t=>`<li>${t}</li>`).join('')}</ul></div>
+      <div><div class="sub">Tools</div><ul class="plain">${x.tools.map(t=>`<li>${t}</li>`).join('')}</ul><div class="sub">Validate</div><ul class="plain">${x.v.map(t=>`<li>${t}</li>`).join('')}</ul></div></div></li>`).join('');
+
+    // acceptance table
+    const avail = {rexButton:cfg.rexButton, rexPir:cfg.rexPir, manual:cfg.manualRelease&&safe};
+    const rows = SCN.filter(([k])=>avail[k]!==false).map(([k,l])=>{ const r=simulate(k);
+      const extra=[]; if(r.forcedAlarm) extra.push('forced-open alarm'); if(r.heldAlarm) extra.push('held-open alarm'); if(r.siren) extra.push('siren sounds'); if(r.operatorOn) extra.push('operator opens');
+      if((k==='forced'||k==='held')&&!cfg.dps) extra.push('no alarm: no door sensor');
+      return `<tr><td>${l}</td><td>${TRIGGER[k]}</td><td><b style="color:${r.locked?'var(--ok)':'var(--bad)'}">${r.locked?'Locked':'Unlocked'}</b>, ${V(r.vLock)}${extra.length?'; '+extra.join(', '):''}</td><td><input class="meas" type="text" inputmode="decimal" data-meas="${k}" value="${(measured[k]||'').replace(/"/g,'&quot;')}" aria-label="Measured result for ${l}" placeholder="V"></td></tr>`; });
+    document.getElementById('accept').innerHTML = `<thead><tr><th>Scenario</th><th>How to trigger it on site</th><th>Expected result</th><th>Measured</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+  }
+  document.getElementById('steps').addEventListener('change', e=>{ const t=e.target.dataset.step; if(t){ done[t]=e.target.checked; if(!done[t]) delete done[t]; renderInstall(); renderChrome(); save(); const el=document.querySelector(`[data-step="${CSS.escape(t)}"]`); if(el) el.focus(); } });
+  document.getElementById('accept').addEventListener('input', e=>{ const k=e.target.dataset.meas; if(k){ measured[k]=e.target.value; save(); } });
+
+  // ---------- presets ----------
+  const PRESETS = [
+    {id:'kit', name:'G3 kit with a 12V strike', note:'The simplest office door. The Door Hub Mini powers a 12V fail-secure strike from its own terminal: lock + on NO, lock − on COM. The inside lever always opens the door, and the exit button just logs exits without an alarm.', cfg:{}},
+    {id:'strike24', name:'24V strike on the dry relay', note:'The hub can only supply 12V, so a 24V strike goes on the dry terminal. The supply’s + goes to the hub’s dry COM, the relay’s NO passes it to the strike’s +, and the strike’s − returns to the supply’s −.', cfg:{lockV:24, amps:0.25, supply:'psu', psuV:24, psuA:1, battery:true}},
+    {id:'mag', name:'Glass door with a maglock', note:'Maglocks are fail-safe: they hold only while powered, so they go on NC. Best practice uses the dry relay with a 24V supply, a motion sensor and push-to-exit button that cut lock power directly, and a fire alarm release.', cfg:{hub:'door', lock:'mag', lockV:24, amps:0.25, supply:'psu', psuV:24, psuA:1, contact:'NC', rexButton:false, rexPir:true, pirDirect:true, manualRelease:true, fire:true}},
+    {id:'mag2', name:'Double doors with maglocks', note:'Two 12V maglocks can go over the hub’s 1A limit, so Ubiquiti recommends the dry terminal with an external 24V supply. Both maglocks are wired in parallel on the same switched circuit.', cfg:{doors:'double', hub:'door', lock:'mag2', lockV:24, amps:0.5, supply:'psu', psuV:24, psuA:2, contact:'NC', rexButton:false, rexPir:true, pirDirect:true, manualRelease:true, fire:true}},
+    {id:'auto', name:'Automatic door with an operator', note:'The Door Hub’s operator output is a dry contact: it signals the operator to open while the operator keeps its own power. Set a short opening delay in UniFi Access so the strike releases before the operator pushes.', cfg:{hub:'door', lockV:24, amps:0.25, supply:'psu', psuV:24, psuA:1, operator:true}},
+    {id:'lobby', name:'Lobby doors, fully featured', note:'A pair of maglocks on a 24V supply with an access control module. The fire panel drops the supply through its fire input, a two-relay motion sensor and a double-pole push-to-exit release the locks directly and tell the hub, an operator opens the doors after a 1-second delay, and an amber strobe flags forced or propped doors.', cfg:{doors:'double', hub:'door', lock:'mag2', lockV:24, amps:0.5, supply:'psu', psuV:24, psuA:3, psuType:'acm', battery:true, contact:'NC', rexButton:false, rexPir:true, pirDirect:true, manualRelease:true, mrRex:true, fire:true, fireMethod:'psu', operator:true, opDelay:1, siren:true, sirenType:'strobe', sirenAmps:0.10}},
+    {id:'panic', name:'Panic bar with latch retraction', note:'An exit device with electric latch retraction pulls the latch in when the hub grants access, so the door can be pushed or opened by an operator. It runs on 24V from the exit device maker’s supply, and the device’s built-in request-to-exit switch (often an RX option) goes to the hub’s exit request input like an exit button.', cfg:{hub:'door', lock:'elr', lockV:24, amps:0.9, supply:'psu', psuV:24, psuA:2, psuType:'mfr', contact:'NO'}},
+    {id:'m-dps', mistake:true, name:'Mistake: door sensor read backwards', note:'The door contact is wired on NC, but Access is set to close-active. Run Idle: the closed door shows as open and the hub raises a false alarm. Use Fix this on the check to match them.', cfg:{dpsForm:'NC', dpsTrigger:'NO'}},
+    {id:'m-contact', mistake:true, name:'Mistake: maglock on NO', note:'Run Idle, then Credential granted. With the maglock on NO, the logic is inverted: the door sits unlocked and only locks while someone badges in. Use Fix this on the Relay contact check to move it to NC.', cfg:{hub:'door', lock:'mag', lockV:24, amps:0.25, supply:'psu', psuV:24, psuA:1, contact:'NO', rexButton:false, rexPir:true, pirDirect:true, manualRelease:true, fire:true}},
+    {id:'m-24', mistake:true, name:'Mistake: 24V lock on the hub terminal', note:'The powered terminal only supplies 12V, so a 24V strike gets half its rated voltage and won’t release reliably. Run Credential granted to see it, then fix it by switching to dry mode with a 24V supply.', cfg:{lockV:24, amps:0.25}},
+    {id:'m-run', mistake:true, name:'Mistake: long run on thin wire', note:'A 12V maglock at the end of 250 ft of 22 AWG loses a lot of voltage in the cable, so it holds with reduced force. Try 18 AWG, or switch the lock to 24V, which halves the current and the drop.', cfg:{hub:'door', lock:'mag', lockV:12, amps:0.5, contact:'NC', gauge:22, run:250, rexButton:false, rexPir:true, pirDirect:true, manualRelease:true, fire:true}}
+  ];
+  let preset = ('preset' in STORE) ? STORE.preset : 'kit';
+  const PR=document.getElementById('presets'), PN=document.getElementById('presetNote');
+
+  function renderPresets(){
+    PR.innerHTML = PRESETS.map(p=>`<button type="button" data-p="${p.id}" class="${p.mistake?'mistake':''}" aria-pressed="${preset===p.id}"><span class="k">${p.mistake?'COMMON MISTAKE':'TEMPLATE'}</span>${(n=>n.charAt(0).toUpperCase()+n.slice(1))(p.name.replace(/^Mistake: /,''))}</button>`).join('');
+    const p = PRESETS.find(x=>x.id===preset);
+    PN.hidden = !p; PN.className = 'note'+(p&&p.mistake?' mistake':''); PN.innerHTML = p ? `<b>${p.mistake?'Common mistake: ':''}${p.name.replace(/^Mistake: /,'')}.</b> ${p.note}` : '';
+  }
+  PR.addEventListener('click', e=>{ const b=e.target.closest('[data-p]'); if(!b) return; const p=PRESETS.find(x=>x.id===b.dataset.p);
+    cfg = Object.assign(defaults(), p.cfg); scenario='idle'; preset=p.id; update(); });
+  C.addEventListener('click', e=>{ if(e.target.closest('[data-seg]')) preset=null; }, true);
+  C.addEventListener('change', ()=>{ preset=null; }, true);
+  const LT=document.getElementById('learnToggle');
+  function applyLearn(){ document.body.classList.toggle('learning',UI.learn); LT.setAttribute('aria-pressed',String(UI.learn)); }
+  LT.addEventListener('click', ()=>{ UI.learn=!UI.learn; applyLearn(); save(); });
+
+  // ---------- scenarios ----------
+  const SC = document.getElementById('scenarios');
+  function renderScenarios(){
+    const avail = {rexButton:cfg.rexButton, rexPir:cfg.rexPir, manual:cfg.manualRelease&&isSafe()};
+    if(avail[scenario]===false) scenario='idle';
+    const groups=[['Everyday',['idle','grant','rexButton','rexPir','manual','schedule']],['Alarms',['forced','held']],['Emergencies and failures',['fire','power','hubOff']]];
+    const lab=Object.fromEntries(SCN);
+    SC.innerHTML = groups.map(([gname,keys])=>`<div class="scngroup">${gname.toUpperCase()}</div>`+keys.map(k=>`<button type="button" data-s="${k}" aria-pressed="${scenario===k}" ${avail[k]===false?'disabled':''}><span class="a">${lab[k]}</span><span class="b">${avail[k]===false?'Not installed on this door':TRIGGER[k]}</span></button>`).join('')).join('');
+  }
+  SC.addEventListener('click', e=>{ const b=e.target.closest('[data-s]'); if(!b||b.disabled) return; scenario=b.dataset.s; update(); });
+
+  // ---------- app chrome: tabs, summary strip, badges ----------
+  const TABS=['design','simulate','survey','install'];
+  function showTab(t, focusPanel){
+    if(!TABS.includes(t)) t='design';
+    UI.tab=t;
+    TABS.forEach(x=>{ const tb=document.getElementById('t-'+x), p=document.getElementById('p-'+x);
+      tb.setAttribute('aria-selected', String(x===t)); tb.tabIndex = x===t?0:-1; p.hidden = x!==t; });
+    if(location.hash.slice(1)!==t){ try{ history.replaceState(null,'','#'+t); }catch(e){} }
+    if(focusPanel){ window.scrollTo({top:0}); document.getElementById('p-'+t).focus({preventScroll:true}); }
+    save();
+  }
+  document.querySelector('.stages').addEventListener('click', e=>{ const b=e.target.closest('[data-tab]'); if(b) showTab(b.dataset.tab); });
+  document.querySelector('.stages').addEventListener('keydown', e=>{ const i=TABS.indexOf(UI.tab); let n=null;
+    if(e.key==='ArrowRight') n=(i+1)%4; if(e.key==='ArrowLeft') n=(i+3)%4; if(e.key==='Home') n=0; if(e.key==='End') n=3;
+    if(n!==null){ e.preventDefault(); showTab(TABS[n]); document.getElementById('t-'+TABS[n]).focus(); } });
+  document.addEventListener('click', e=>{ const g=e.target.closest('[data-go]'); if(g){ showTab(g.dataset.go, true); if(g.dataset.scroll==='checks'){ UI.ckFilter='issues'; renderChecks(); document.getElementById('checksPanel').scrollIntoView({block:'start'}); document.getElementById('checksH').focus({preventScroll:true}); } } });
+  window.addEventListener('hashchange', ()=>{ const h=location.hash.slice(1); if(TABS.includes(h)) showTab(h); });
+  function showSub(s){ UI.sub=s; document.querySelectorAll('#subtabs [data-sub]').forEach(b=>{ const on=b.dataset.sub===s; b.setAttribute('aria-selected',String(on)); b.tabIndex=on?0:-1; document.getElementById('s-'+b.dataset.sub).hidden=!on; }); save(); }
+  document.getElementById('subtabs').addEventListener('click', e=>{ const b=e.target.closest('[data-sub]'); if(b) showSub(b.dataset.sub); });
+  document.getElementById('subtabs').addEventListener('keydown', e=>{ const subs=['steps','equip','wiring','accept']; const i=subs.indexOf(UI.sub); let n=null;
+    if(e.key==='ArrowRight') n=(i+1)%4; if(e.key==='ArrowLeft') n=(i+3)%4; if(n!==null){ e.preventDefault(); showSub(subs[n]); document.querySelector(`[data-sub="${subs[n]}"]`).focus(); } });
+  function showView(v){ UI.view=v; document.getElementById('viewWiring').hidden = v!=='wiring'; document.getElementById('viewDoor').hidden = v!=='door';
+    document.getElementById('viewTitle').textContent = v==='wiring'?'Wiring':'At the door';
+    document.getElementById('viewSeg').innerHTML = [['wiring','Wiring'],['door','At the door']].map(([k,l])=>`<button type="button" data-view="${k}" aria-pressed="${v===k}">${l}</button>`).join(''); save(); }
+  document.getElementById('viewSeg').addEventListener('click', e=>{ const b=e.target.closest('[data-view]'); if(b) showView(b.dataset.view); });
+  document.getElementById('ckFilter').addEventListener('click', e=>{ const b=e.target.closest('[data-ckf]'); if(b){ UI.ckFilter=b.dataset.ckf; renderChecks(); save(); } });
+  document.getElementById('checks').addEventListener('click', e=>{ const b=e.target.closest('[data-fix]'); if(b && FIXES[b.dataset.fix]){ const before=issueCount(); FIXES[b.dataset.fix](); preset=null; update(); fixReport(before,`Fixed: ${b.dataset.fix}.`); const f=document.getElementById('fixAll'); (f.hidden?document.getElementById('checksH'):f).focus(); } });
+  document.getElementById('fixAll').addEventListener('click', ()=>{ const before=issueCount(); applyFixes(); preset=null; update(); fixReport(before,'Applied the automatic fixes.'); document.getElementById('checksH').focus(); });
+  document.getElementById('svFilter').addEventListener('click', e=>{ const b=e.target.closest('[data-svf]'); if(b){ UI.svFilter=b.dataset.svf; renderSurvey(); save(); } });
+  const DN=document.getElementById('doorName');
+  if(STORE.doorName) DN.value=STORE.doorName;
+  DN.addEventListener('input', ()=>{ renderChrome(); save(); });
+  // glossary drawer
+  const DR=document.getElementById('drawer'), SR=document.getElementById('scrim'); let lastFocus=null;
+  function openDrawer(){ lastFocus=document.activeElement; DR.hidden=false; SR.hidden=false; document.getElementById('drawerClose').focus(); }
+  function closeDrawer(){ DR.hidden=true; SR.hidden=true; if(lastFocus) lastFocus.focus(); }
+  document.getElementById('helpBtn').addEventListener('click', openDrawer);
+  document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+  SR.addEventListener('click', ()=>{ closeDrawer(); closeDoors(); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !DR.hidden) closeDrawer(); if(e.key==='Escape' && !DD.hidden) closeDoors(); });
+  // start over: two-step confirm
+  const RB=document.getElementById('resetBtn'); let armed=null;
+  RB.addEventListener('click', ()=>{
+    if(!armed){ RB.textContent='Click again to clear everything'; RB.classList.add('danger'); armed=setTimeout(()=>{ armed=null; RB.textContent='Start over'; RB.classList.remove('danger'); },4000); return; }
+    clearTimeout(armed); armed=null; RB.textContent='Start over'; RB.classList.remove('danger');
+    cfg=defaults(); scenario='idle'; preset='kit'; [survey,done,measured].forEach(o=>Object.keys(o).forEach(k=>delete o[k]));
+    update(); showTab('design', true); });
+  function renderChrome(){
+    const ic=issueCount(), L=LOCKS[cfg.lock];
+    const bd=document.getElementById('b-design'); bd.className='badge '+(ic.bad?'bad':ic.warn?'warn':'ok'); bd.textContent = ic.bad+ic.warn ? `${ic.bad+ic.warn} to fix` : 'No issues';
+    const bs=document.getElementById('b-simulate'); const r=simulate(); bs.className='badge'; bs.textContent = (SCN.find(s=>s[0]===scenario)||['','Idle'])[1];
+    const bv=document.getElementById('b-survey'); bv.className='badge '+(SVSTAT.no?'bad':SVSTAT.checked===SVSTAT.total&&SVSTAT.total?'ok':''); bv.textContent = SVSTAT.no?`${SVSTAT.no} blocker${SVSTAT.no>1?'s':''}`:`${SVSTAT.checked}/${SVSTAT.total}`;
+    const bi=document.getElementById('b-install'); bi.className='badge '+(STEPSTAT.done===STEPSTAT.total&&STEPSTAT.total?'ok':''); bi.textContent=`${STEPSTAT.done}/${STEPSTAT.total} steps`;
+    document.getElementById('strip').innerHTML = `<span class="chip"><b>Door</b> ${DN.value||'Untitled'}</span>
+      <span class="chip"><b>Hub</b> ${HUBS[cfg.hub].name}</span>
+      <span class="chip"><b>Lock</b> ${L.short}, ${cfg.lockV}V, ${L.safe?'fail-safe':'fail-secure'}</span>
+      <span class="chip"><b>Power</b> ${cfg.supply==='hub'?'Hub 12V':'Dry, '+cfg.psuV+'V supply'}</span>
+      <span class="chip"><b>Opening</b> ${cfg.doors==='double'?'Pair':'Single'}</span>
+      ${ic.bad+ic.warn?`<button type="button" class="chip bad" data-go="design" data-scroll="checks">${ic.bad+ic.warn} design issue${ic.bad+ic.warn>1?'s':''} →</button>`:`<span class="chip ok">Design checks pass</span>`}`;
+  }
+
+  function update(){
+    const fm=document.getElementById('fixMsg'); if(fm) fm.textContent='';
+    const active = document.activeElement; const key = active && (active.dataset?.seg ? 'seg:'+active.dataset.seg+':'+active.dataset.v : active.dataset?.chk ? 'chk:'+active.dataset.chk : active.dataset?.sel ? 'sel:'+active.dataset.sel : active.dataset?.num ? 'num:'+active.dataset.num : null);
+    renderControls(); renderScenarios(); renderPresets();
+    const r = simulate();
+    renderSchematic(r); renderDoorView(r); renderStatus(r); renderChecks(); renderWiring(); renderEquip(); renderSurvey(); renderInstall(); renderChrome(); save();
+    if(key){ const [t,a,b]=key.split(':'); const sel = t==='seg'?`[data-seg="${a}"][data-v="${b}"]`:`[data-${t}="${a}"]`; const el=C.querySelector(sel); if(el) el.focus(); }
+  }
+  // ---------- doors ----------
+  const esc=t=>String(t).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[m]);
+  const DS=document.getElementById('doorSel'), DD=document.getElementById('doorsDrawer');
+  function applyDoor(r){ cfg=Object.assign(defaults(), r.cfg?JSON.parse(JSON.stringify(r.cfg)):{}); scenario=r.scenario||'idle';
+    [survey,done,measured].forEach(o=>Object.keys(o).forEach(k=>delete o[k])); Object.assign(survey,r.survey||{}); Object.assign(done,r.done||{}); Object.assign(measured,r.measured||{});
+    preset=r.cfg?(r.preset==null?null:r.preset):'kit'; DN.value=r.name; }
+  function switchDoor(id){ const r=DOORS.find(x=>x.id===id); if(!r) return; syncActive(); ACTIVE=id; applyDoor(r); update(); renderDoors(); }
+  function uniqueName(n){ let k=n, i=2; while(DOORS.some(r=>r.name===k)) k=`${n} ${i++}`; return k; }
+  function addDoor(copy){ syncActive(); const name=copy?uniqueName(`${DN.value} (copy)`):uniqueName(`Door ${DOORS.length+1}`);
+    const r={id:did(),name,cfg:copy?JSON.parse(JSON.stringify(cfg)):null,scenario:'idle',survey:{},done:{},measured:{},preset:copy?preset:'kit'}; DOORS.push(r); switchDoor(r.id);
+    const inp=DD.querySelector(`[data-dname="${r.id}"]`); if(inp&&!DD.hidden){ inp.focus(); inp.select(); } }
+  function doorLine(r){ const c=r.id===ACTIVE?cfg:(r.cfg||defaults()); const L=LOCKS[c.lock], H=HUBS[c.hub]; return `${H?H.name:''}, ${L?L.short:''} ${c.lockV}V${c.doors==='double'?', pair':''}`; }
+  function renderDoors(){ try{ if(window.parent!==window&&window.parent.AVS&&window.parent.AVS.refresh) setTimeout(()=>window.parent.AVS.refresh(),0); }catch(e){}
+    DS.innerHTML=DOORS.map(r=>`<option value="${r.id}" ${r.id===ACTIVE?'selected':''}>${esc(r.name||'Untitled door')}</option>`).join('');
+    document.getElementById('doorList').innerHTML=DOORS.map(r=>`<li class="${r.id===ACTIVE?'cur':''}"><input type="text" data-dname="${r.id}" value="${esc(r.name)}" aria-label="Door name"><span class="rmeta">${esc(doorLine(r))}</span>
+      <span class="rbtns">${r.id===ACTIVE?'<span class="chip ok">Current</span>':`<button type="button" class="btn small" data-dopen="${r.id}">Open</button>`}<button type="button" class="btn small ghost" data-ddel="${r.id}" ${DOORS.length<2?'disabled':''}>Delete</button></span></li>`).join(''); }
+  DS.addEventListener('change',()=>switchDoor(DS.value));
+  let lastDF=null;
+  function openDoors(){ lastDF=document.activeElement; syncActive(); renderDoors(); DD.hidden=false; SR.hidden=false; const f=DD.querySelector('.cur input'); if(f) f.focus(); }
+  function closeDoors(){ if(DD.hidden) return; DD.hidden=true; SR.hidden=true; if(lastDF) lastDF.focus(); }
+  document.getElementById('doorsBtn').addEventListener('click',openDoors);
+  document.getElementById('doorsClose').addEventListener('click',closeDoors);
+  document.getElementById('doorNew').addEventListener('click',()=>addDoor(false));
+  document.getElementById('doorDup').addEventListener('click',()=>addDoor(true));
+  DD.addEventListener('input',e=>{ const t=e.target; if(!t.dataset.dname) return; const r=DOORS.find(x=>x.id===t.dataset.dname); r.name=t.value; if(r.id===ACTIVE) DN.value=t.value;
+    DS.querySelector(`option[value="${r.id}"]`).textContent=t.value||'Untitled door'; renderChrome(); save(); });
+  let delArm=null;
+  DD.addEventListener('click',e=>{ const o=e.target.closest('[data-dopen]'); if(o){ switchDoor(o.dataset.dopen); const n=DD.querySelector(`[data-dname="${o.dataset.dopen}"]`); if(n) n.focus(); return; }
+    const d=e.target.closest('[data-ddel]'); if(!d||DOORS.length<2) return; const id=d.dataset.ddel;
+    if(delArm!==id){ delArm=id; d.textContent='Confirm delete'; d.classList.add('danger'); setTimeout(()=>{ if(delArm===id){ delArm=null; renderDoors(); } },4000); return; }
+    delArm=null; const i=DOORS.findIndex(r=>r.id===id); DOORS.splice(i,1);
+    if(id===ACTIVE){ ACTIVE=DOORS[Math.max(0,i-1)].id; applyDoor(DOORS.find(r=>r.id===ACTIVE)); update(); }
+    renderDoors(); save(); document.getElementById('doorNew').focus(); });
+
+  // ---------- report data for the combined toolkit ----------
+  // Returns plain data (text runs, tables, SVG strings) so the host page can lay it out in Word.
+  const HOST=(()=>{ try{ return window.parent!==window && window.parent.AVS ? window.parent.AVS : null; }catch(e){ return null; } })();
+  // inside the toolkit, the suite bar above this frame has the Save report button
+  function runsOf(node,base={}){ const out=[]; node.childNodes.forEach(n=>{
+      if(n.nodeType===3){ const t=n.textContent.replace(/\s+/g,' '); if(t) out.push(Object.assign({text:t},base)); }
+      else if(n.nodeType===1){ const tg=n.tagName; if(tg==='BR'){ out.push({text:'',br:true}); return; } if(['BUTTON','SELECT','SCRIPT'].includes(tg)) return;
+        if(tg==='INPUT'){ if(n.value) out.push(Object.assign({text:n.value},base)); return; }
+        const o=Object.assign({},base); if(tg==='B'||tg==='STRONG') o.b=true; if(n.classList.contains('pick')){ o.b=true; o.c='green'; }
+        const col=(n.getAttribute('style')||''); if(/--ok/.test(col)) o.c='ok'; else if(/--bad/.test(col)) o.c='bad'; else if(/--warn/.test(col)) o.c='warn';
+        out.push(...runsOf(n,o)); } });
+    return out; }
+  const tableRows=sel=>[...document.querySelectorAll(sel+' tbody tr')].map(tr=>[...tr.children].map(td=>({runs:runsOf(td)})));
+  function standalone(svg){ let vars='', css='';
+    for(const sh of document.styleSheets){ let rules; try{ rules=sh.cssRules; }catch(e){ continue; }
+      for(const r of rules){ if(r.type!==1) continue; if(r.selectorText===':root'&&r.style.getPropertyValue('--ink')&&!vars){ for(let i=0;i<r.style.length;i++){ const p=r.style[i]; if(p.startsWith('--')) vars+=`${p}:${r.style.getPropertyValue(p)};`; } }
+        else if(/^[.]/.test(r.selectorText)&&!/^\.(seg|btn|chip|stage|panel|drawer|scrim|appbar|tpl|svbtns|subtab|scnlist|quick|verdict|roomlist)/.test(r.selectorText)) css+=r.cssText.replace(/animation:[^;]+;?/g,''); } }
+    return svg.replace(/<svg([^>]*)>/,(m,a)=>`<svg${a}><style>svg{${vars}color:#17212A;font-family:"Barlow Condensed","Arial Narrow",Arial,sans-serif}${css}</style>`); }
+  function doorEquip(){ return [...document.querySelectorAll('#equip tbody tr')].map(tr=>{ const td=tr.children, pick=td[3]&&td[3].querySelector('.pick');
+      return [td[0].textContent.trim(), (pick?pick.textContent:td[1].textContent).trim(), 1]; }); }
+  function doorStats(){ const ic=issueCount(), all=surveyItems().flatMap(([,i])=>i), no=all.filter(i=>survey[i.id]==='no').length, chk=all.filter(i=>survey[i.id]).length;
+    const avail={rexButton:cfg.rexButton,rexPir:cfg.rexPir,manual:cfg.manualRelease&&isSafe()}, scn=SCN.filter(([k])=>avail[k]!==false), meas=scn.filter(([k])=>(measured[k]||'').trim()).length;
+    const L=LOCKS[cfg.lock], H=HUBS[cfg.hub];
+    return {hub:H.name, lock:`${L.name}, ${cfg.lockV}V DC, ${L.safe?'fail-safe':'fail-secure'}`, power:cfg.supply==='hub'?'Hub powered terminal (12V)':`External ${cfg.psuV}V DC supply, ${cfg.psuA} A${cfg.battery?', battery backup':''}`, opening:cfg.doors==='double'?'Pair of doors':'Single door',
+      design:ic.bad+ic.warn?[ic.bad?'bad':'warn',`${ic.bad+ic.warn} open item${ic.bad+ic.warn>1?'s':''} (${ic.bad} failed, ${ic.warn} warning${ic.warn===1?'':'s'})`]:['ok','All criteria pass'],
+      site:no?['bad',`Not ready: ${no} blocking issue${no>1?'s':''}`]:chk===all.length?['ok','Ready for installation']:['warn',`Survey in progress: ${chk} of ${all.length} items verified`],
+      inst:`${STEPSTAT.done} of ${STEPSTAT.total} steps complete; ${meas} of ${scn.length} acceptance readings recorded`,
+      short:{design:ic.bad+ic.warn?`${ic.bad+ic.warn} open item${ic.bad+ic.warn>1?'s':''}`:'All pass',site:no?`Not ready (${no} blocking)`:chk===all.length?'Ready':`In progress (${chk}/${all.length})`,inst:`${STEPSTAT.done}/${STEPSTAT.total} steps; ${meas}/${scn.length} readings`},
+      scn}; }
+  const CKN_D={'Relay contact':'Relay contact selection','Supply voltage':'Supply voltage','Hub current limit':'Hub output current'};
+  function doorBlocks(inc){ const B=[], S=doorStats(), H=t=>B.push({t:'h',lvl:2,text:t}), H3=t=>B.push({t:'h',lvl:3,text:t}), P=(runs,o)=>B.push(Object.assign({t:'p',runs:typeof runs==='string'?[{text:runs}]:runs},o||{}));
+    const L=LOCKS[cfg.lock], safe=L.safe, idle=simulate('idle'), un=simulate('grant');
+    if(inc.review){ H('Design Review');
+      const order={bad:0,warn:1,info:2,ok:3}, lbl={ok:'Pass',warn:'Warning',bad:'Fail',info:'Advisory'}, sc=inc.reviewScope||'all';
+      const rs=checks().filter(([t])=>sc==='all'||(sc==='noadv'&&t!=='info')||(sc==='issues'&&(t==='bad'||t==='warn')));
+      if(!rs.length) P('No open items. The design meets every criterion the simulator reviews.'); else B.push({t:'table',heads:['Status','Criterion','Finding'],widths:[1300,2300,5760],rows:rs.sort((a,b)=>order[a[0]]-order[b[0]]).map(([t,b,m])=>[{status:t,text:lbl[t]},{runs:[{text:CKN_D[b]||b,b:true}]},{runs:[...runsOf(Object.assign(document.createElement('div'),{innerHTML:m})),...(inc.impact&&WHY[b]&&(t==='bad'||t==='warn')?[{text:'',br:true},{text:'Impact: '+WHY[b],c:'grey',sz:18}]:[])]}])});
+      const ic=issueCount(); if(inc.openNote&&ic.bad+ic.warn) B.push({t:'note',text:`${ic.bad+ic.warn} open item${ic.bad+ic.warn>1?'s':''} should be resolved before hardware is ordered or installation is scheduled.`});
+    }
+    if(inc.spec||inc.equip){ H('Door Specification');
+      if(inc.spec) B.push({t:'kv',rows:[['Hub',HUBS[cfg.hub].name],['Lock',`${L.name}, ${cfg.lockV}V DC, about ${fmt(cfg.amps)} A, ${safe?'fail-safe':'fail-secure'}`],['Opening',S.opening],['Lock power',S.power],
+        ['Relay contact',`${cfg.contact} (${safe?'NC keeps a fail-safe lock powered at rest':'NO powers a fail-secure lock only while unlocked'})`],['Lock cable',`${cfg.gauge} AWG, ${fmt(cfg.run,0)} ft one way`],
+        ['Voltage at the lock',`${fmt(idle.vLock,1)} V when ${idle.locked?'locked':'unlocked'} at rest; ${fmt(un.vLock,1)} V when a credential is granted`]]});
+      if(inc.equip){ H3('Equipment List');
+      B.push(inc.alts?{t:'table',heads:['Category','Specified','Requirements','Alternatives'],widths:[1500,2300,2560,3000],rows:tableRows('#equip')}:{t:'table',heads:['Category','Specified','Requirements'],widths:[2200,3400,3760],rows:tableRows('#equip').map(r=>r.slice(0,3))}); } }
+    if(inc.scn||inc.schematics||inc.doorImg){ H('Simulation Results');
+      if(inc.scn){ P('Each scenario was run in the wiring simulator against this door’s design. The expected results below become the acceptance criteria on site.');
+      B.push({t:'table',heads:['Scenario','How it is triggered','Expected result'],widths:[2300,3900,3160],rows:S.scn.map(([k,l])=>{ const r=simulate(k), ex=[]; if(r.forcedAlarm) ex.push('forced-open alarm'); if(r.heldAlarm) ex.push('held-open alarm'); if(r.siren) ex.push('siren sounds'); if(r.operatorOn) ex.push('operator opens'); if((k==='forced'||k==='held')&&!cfg.dps) ex.push('no alarm: no door sensor');
+        return [{runs:[{text:l,b:true}]},{runs:[{text:TRIGGER[k]}]},{runs:[{text:r.locked?'Locked':'Unlocked',b:true,c:r.locked?'ok':'bad'},{text:`, ${fmt(r.vLock,1)} V at the lock${ex.length?'; '+ex.join(', '):''}`}]}]; })}); }
+      const keep=scenario, shot=k=>{ renderSchematic(simulate(k)); return standalone(document.getElementById('schem').innerHTML.replace(/<text[^>]*>[^<]*switch to[^<]*<\/text>/gi,'')); };
+      if(inc.schematics){ B.push({t:'h',lvl:3,text:'Wiring schematic, door secured'}); B.push({t:'img',svg:shot('idle'),caption:'Schematic at rest. Highlighted conductors carry current.'});
+      B.push({t:'h',lvl:3,text:'Wiring schematic, credential granted'}); B.push({t:'img',svg:shot('grant'),caption:'Schematic while the hub unlocks the door.'});
+      renderSchematic(simulate(keep)); }
+      if(inc.doorImg){ renderDoorView(simulate('idle')); const dv=document.querySelector('[data-doorview]'); if(dv&&dv.innerHTML.includes('<svg')){ B.push({t:'h',lvl:3,text:'Device locations at the door'}); B.push({t:'img',svg:standalone(dv.innerHTML.slice(dv.innerHTML.indexOf('<svg'))),caption:'Elevation of the opening showing where each device mounts.',maxH:520}); }
+      renderDoorView(simulate(keep)); } }
+    if(inc.wiring){ H('Wiring Schedule');
+      B.push({t:'table',heads:['From','To','Wire colors','Cable','Notes'],widths:[1900,1900,1900,1500,2160],rows:tableRows('#wiring')});
+      const f=document.querySelector('#s-wiring .foot'); if(inc.wiringNotes&&f) P([{text:f.textContent,c:'grey',sz:20}]);
+      if(inc.wiringNotes) P([{text:'Label both ends of every conductor and cable with the device and terminal. Where a black conductor carries +, re-mark it red at both ends.',c:'grey',sz:20}]); }
+    if(inc.survey){ H('Pre-Installation Site Survey');
+      const all=surveyItems(), flat=all.flatMap(([,i])=>i), counts={ok:0,no:0,na:0}; flat.forEach(i=>{ if(survey[i.id]) counts[survey[i.id]]++; });
+      P([{text:'Site readiness: ',b:true},{text:S.site[1].split(':')[0],b:true,c:S.site[0]},{text:`. ${counts.ok+counts.no+counts.na} of ${flat.length} items verified: ${counts.ok} ready, ${counts.no} not ready, ${counts.na} not applicable.`}]);
+      const blk=flat.filter(i=>survey[i.id]==='no'); if(inc.svBlock&&blk.length) B.push({t:'note',label:'Blocking issues:',runs:blk.flatMap((b,k)=>[...(k?[{text:'',br:true}]:[]),{text:b.q+': ',b:true},{text:b.fix}])});
+      const rl={ok:['ok','Ready'],no:['bad','Not ready'],na:['info','N/A']}, rows=[];
+      const svs=inc.svScope||'all', keep=i=>svs==='all'||(svs==='checked'&&survey[i.id])||(svs==='issues'&&survey[i.id]==='no'), crit=inc.svCriteria, fx=inc.svFix;
+      all.forEach(([n,items0])=>{ const items=items0.filter(keep); if(!items.length) return; rows.push({group:n}); items.forEach(i=>{ const v=survey[i.id];
+        const det=[...(crit?[{text:'Criteria: ',b:true,sz:18},{text:i.pass,sz:18}]:[]),...(fx&&v==='no'?[...(crit?[{text:'',br:true}]:[]),{text:'Corrective action: ',b:true,c:'bad',sz:18},{text:i.fix,c:'bad',sz:18}]:[])];
+        rows.push([{runs:[{text:i.q,b:true}]}, v?{status:rl[v][0],text:rl[v][1]}:{runs:[{text:'Not verified',c:'grey'}]},...(crit||fx?[{runs:det}]:[])]); }); });
+      if(!rows.length) P(svs==='issues'?'No items are marked not ready.':'No items have been verified yet.');
+      else B.push(crit||fx?{t:'table',heads:['Item','Status',crit?'Acceptance criteria':'Corrective action'],widths:[2700,1400,5260],rows}:{t:'table',heads:['Item','Status'],widths:[6360,3000],rows}); }
+    if(inc.status||inc.steps||inc.tools){ H('Installation Procedure');
+      if(inc.status) P([{text:'Status: ',b:true},{text:S.inst+'.'}]);
+      if(inc.steps&&!inc.stepDetail) B.push({t:'table',heads:['Step','Task','Status'],widths:[900,6860,1600],rows:[...document.querySelectorAll('#steps > li')].map((li,i)=>{ const ok=li.querySelector('[data-step]').checked; return [{runs:[{text:String(i+1),b:true}]},{runs:[{text:li.querySelector('h4').textContent}]},ok?{status:'ok',text:'Complete'}:{runs:[{text:'Open',c:'grey'}]}]; })});
+      if(inc.steps&&inc.stepDetail) [...document.querySelectorAll('#steps > li')].forEach((li,i)=>{ const t=li.querySelector('h4').textContent, ok=li.querySelector('[data-step]').checked, cols=li.querySelectorAll('.stepgrid ul');
+        B.push({t:'h',lvl:3,runs:[{text:`${i+1}. ${t}  `},{text:ok?'Complete':'Open',sz:20,b:true,c:ok?'ok':'grey'}]});
+        if(cols[0]){ P([{text:'Procedure',b:true,sz:20,c:'grey'}],{keep:true}); B.push({t:'list',items:[...cols[0].children].map(x=>runsOf(x))}); }
+        if(cols[2]){ P([{text:'Verification',b:true,sz:20,c:'grey'}],{keep:true}); B.push({t:'list',items:[...cols[2].children].map(x=>runsOf(x))}); }
+        if(cols[1]) P([{text:'Tools and test equipment: ',b:true,sz:20,c:'grey'},{text:[...cols[1].children].map(x=>x.textContent.trim()).join(', '),sz:20}]); });
+      if(inc.tools){ H3('Tools and Test Equipment');
+      B.push({t:'table',heads:['Item','Purpose'],widths:[3400,5960],rows:[...document.querySelectorAll('#tools li')].map(li=>{ const b=li.querySelector('b'), name=b?b.textContent.replace(/:$/,''):li.textContent, rest=b?li.textContent.slice(b.textContent.length).trim():'';
+        return [{runs:[{text:name,b:true}]},{runs:[{text:rest.charAt(0).toUpperCase()+rest.slice(1).replace(/\.$/,'')}]}]; })}); } }
+    if(inc.acceptTbl){ H('Acceptance Testing');
+      P('Each scenario is triggered on site with the client representative present. Measure DC volts at the lock terminals, red probe on lock +, and record the reading.');
+      const mc=inc.measured; B.push({t:'table',heads:['Scenario','How to trigger it','Expected result',...(mc?['Measured']:[])],widths:mc?[2000,3200,2560,1600]:[2300,4100,2960],rows:S.scn.map(([k,l])=>{ const r=simulate(k);
+        return [{runs:[{text:l,b:true}]},{runs:[{text:TRIGGER[k]}]},{runs:[{text:r.locked?'Locked':'Unlocked',b:true,c:r.locked?'ok':'bad'},{text:`, ${fmt(r.vLock,1)} V`}]},...(mc?[(measured[k]||'').trim()?{runs:[{text:measured[k]}]}:{runs:[{text:'Not recorded',c:'grey'}]}]:[])]; })}); }
+    if(inc.signoff) B.push({t:'signoff'});
+    return B; }
+  window.DOOR_API={
+    flush(){ writeNow(); },
+    active(){ return ACTIVE; },
+    open(id){ if(id!==ACTIVE) switchDoor(id); },
+    add(){ addDoor(false); },
+    list(){ syncActive(); return DOORS.map(r=>({id:r.id,name:r.name,line:doorLine(r)})); },
+    report(ids,inc){ syncActive(); const start=ACTIVE, out=[];
+      try{ for(const id of ids){ if(id!==ACTIVE) switchDoor(id); out.push({id,name:DN.value||'Door',stats:doorStats(),equip:doorEquip(),blocks:doorBlocks(inc)}); } }
+      finally{ if(ACTIVE!==start) switchDoor(start); }
+      return out; } };
+  applyLearn();
+  document.getElementById('tplwrap').open = !STORE.cfg;
+  update(); renderDoors();
+  showView(UI.view); showSub(UI.sub);
+  const h0=location.hash.slice(1); showTab(TABS.includes(h0)?h0:UI.tab);
+})();
+</script>
+</body>
+</html>
