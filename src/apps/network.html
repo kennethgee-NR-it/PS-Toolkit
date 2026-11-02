@@ -612,8 +612,8 @@ input.reqin{width:100%;min-width:110px;font:inherit;font-size:13.5px;padding:5px
     <div class="tablewrap"><table class="tbl runs lines" id="linesTbl"><thead><tr><th>Line</th><th>Drop</th><th class="num">Length</th><th>Cable</th><th>Pulled</th><th>Closet</th><th>Outlet</th><th>Labeled</th><th>Test</th><th class="num">Measured</th></tr></thead><tbody></tbody><tfoot></tfoot></table></div>
   </div>
   <div class="panel" style="margin-top:16px">
-    <div class="panel-h"><h3>Cable boxes and waste</h3></div>
-    <p class="hint" style="margin-top:0">Pull the longest lines first from full boxes, then finish with short lines from what’s left. This plan packs every line into boxes that way.</p>
+    <div class="panel-h"><h3>Cable boxes and waste</h3><label class="inline" style="font-weight:600;font-size:13px">Boxes pulled at once <input type="number" id="pullBoxes" min="1" step="1" value="1" style="width:70px" aria-describedby="pullHint"></label></div>
+    <p class="hint" style="margin-top:0" id="pullHint">Pull the longest lines first from full boxes, then finish with short lines from what’s left. Set how many boxes go on the pulling rack: with more than one, each pull takes one cable from every box to lines from the same IT closet.</p>
     <div id="boxes"></div>
   </div>
   <div class="panel" style="margin-top:16px">
@@ -721,7 +721,7 @@ input.reqin{width:100%;min-width:110px;font:inherit;font-size:13.5px;padding:5px
     door:{name:'Door access',short:'Door',lines:1,poe:30,cable:'cat6',dev:'ceiling',color:'#7A4CC2',prefix:'DR',hint:'Door hub above the door; one line'}};
   const TYPE_ALIAS={drop:'data',poe:'data'};
   const CABLE={cat6a:{name:'Cat6A',color:'#2C6FB7'},cat6:{name:'Cat6',color:'#2D8A3E'}};
-  const defaults=()=>({swMode:'auto',switches:[],rack:{type:'4post',height:24,depth:24,orient:'h',pdu:'1u',ups:'2u',managers:true,order:null,custom:false,shelves:[],blanks:[]},tech:'',boxLen:1000,gateway:'udm-pro-max',switchModel:'pro-xg-10-poe',apModel:'e7',uplink:'auto',uplinkDist:3,panel:'1u24',switchCount:'auto',udmData:true,headroom:20,ceil:10,rackAllow:15,loopRack:10,loopDev:3,waste:10,area:0});
+  const defaults=()=>({swMode:'auto',switches:[],rack:{type:'4post',height:24,depth:24,orient:'h',pdu:'1u',ups:'2u',managers:true,order:null,custom:false,shelves:[],blanks:[]},tech:'',boxLen:1000,pullBoxes:1,gateway:'udm-pro-max',switchModel:'pro-xg-10-poe',apModel:'e7',uplink:'auto',uplinkDist:3,panel:'1u24',switchCount:'auto',udmData:true,headroom:20,ceil:10,rackAllow:15,loopRack:10,loopDev:3,waste:10,area:0});
   const G=()=>GW[cfg.gateway]||GW['udm-pro-max'], SWM=()=>SW[cfg.switchModel]||SW['pro-xg-10-poe'];
   // per-device properties (an AP takes its power, PoE class and uplink speed from its model)
   const apOf=it=>APM[it.model]||APM[cfg.apModel]||APM.e7;
@@ -810,10 +810,32 @@ input.reqin{width:100%;min-width:110px;font:inherit;font-size:13.5px;padding:5px
     const una=LS.filter(L=>!L.l.closet); if(una.length) add('bad','No IT closet',`${una.length} line${una.length>1?'s have':' has'} no IT closet on their floor, so ${una.length>1?'they':'it'} can’t be labeled or measured.`);
     if(LS.length&&!out.some(x=>x.t==='bad'||x.t==='warn')) add('ok','Quality control',LS.every(L=>lineStage(L)==='done')?'Every line is pulled, terminated, labeled and tested with a pass.':'No problems so far.');
     return out; }
-  function boxPlan(){ const out={}, BL=Math.max(100,cfg.boxLen||1000);
-    Object.keys(CABLE).forEach(k=>{ const ls=allLines().filter(L=>L.cable===k&&L.r.total!=null).sort((a,b)=>b.r.total-a.r.total), boxes=[];
-      ls.forEach(L=>{ const len=Math.ceil(L.r.total); let b=boxes.find(x=>x.left>=len); if(!b){ b={n:boxes.length+1,left:BL,lines:[]}; boxes.push(b); } b.left-=len; b.lines.push(L); });
-      if(boxes.length) out[k]=boxes; }); return out; }
+  // Box plan. Lines are pulled in bundles of `at` cables, one from each box on the pulling rack. A bundle starts at one IT closet,
+  // and bundles run longest first so long lines come off full boxes. When a box on the rack is too short for its next line, it comes
+  // off and the opened box with enough left goes on in its place (a new box only when none has enough). With 1 box at a time this
+  // is the old one-cable-per-pull plan.
+  const measuredLines=()=>allLines().filter(L=>L.r.total!=null);
+  const pullMax=()=>Math.max(1,...Object.keys(CABLE).map(k=>measuredLines().filter(L=>L.cable===k).length));
+  function boxPlan(){ const out={}, BL=Math.max(100,cfg.boxLen||1000), ML=measuredLines();
+    Object.keys(CABLE).forEach(k=>{ const ls=ML.filter(L=>L.cable===k); if(!ls.length) return;
+      const N=Math.max(1,Math.min(ls.length,Math.round(+cfg.pullBoxes)||1)), boxes=[], pulls=[], rack=Array(N).fill(null);
+      // bundles: per closet, longest first, N lines each; then every bundle in order of its longest line
+      const byCl={}; ls.forEach(L=>{ const c=L.r.rk?L.r.rk.id:'-'; (byCl[c]=byCl[c]||[]).push(L); });
+      const groups=[]; Object.values(byCl).forEach(a=>{ a.sort((x,y)=>y.r.total-x.r.total); for(let i=0;i<a.length;i+=N) groups.push(a.slice(i,i+N)); });
+      groups.sort((a,b)=>b[0].r.total-a[0].r.total);
+      groups.forEach(grp=>{ const used=new Set(), p={n:pulls.length+1,rk:grp[0].r.rk,lines:[],swaps:[],start:[]};
+        grp.forEach(L=>{ const len=Math.ceil(L.r.total); let s=-1;
+          // a box on the rack that still fits: the one with the least cable left, so fuller boxes stay free for longer lines
+          rack.forEach((b,j)=>{ if(used.has(j)||!b||b.left<len) return; if(s<0||b.left<rack[s].left) s=j; });
+          if(s<0){ // nothing on the rack fits: change an empty spot first, else the box with the least left
+            rack.forEach((b,j)=>{ if(used.has(j)) return; if(s<0||(rack[s]&&(!b||b.left<rack[s].left))) s=j; });
+            const old=rack[s]; let nb=boxes.find(b=>!rack.includes(b)&&b.left>=len);
+            const isNew=!nb; if(isNew){ nb={n:boxes.length+1,left:BL,lines:[]}; boxes.push(nb); }
+            if(old) p.swaps.push({out:old,outLeft:old.left,in:nb,inLeft:nb.left,isNew}); else p.start.push(nb);
+            rack[s]=nb; }
+          const b=rack[s]; used.add(s); b.left-=len; b.lines.push(L); p.lines.push({L,box:b}); });
+        pulls.push(p); });
+      out[k]={boxes,pulls,at:N}; }); return out; }
 
   // ---------- switches: automatic count of one model, or your own mix ----------
   function swList(autoN){ if(cfg.swMode==='manual'&&cfg.switches.length) return cfg.switches.map((s,i)=>Object.assign({},SW[s.model]||SWM(),{key:s.id,idx:i,model:SW[s.model]?s.model:cfg.switchModel}));
@@ -984,7 +1006,7 @@ input.reqin{width:100%;min-width:110px;font:inherit;font-size:13.5px;padding:5px
     if(n){ out.push(['Patch panel',P.name,panels,`${n} line${n===1?'':'s'} across ${Object.keys(perCloset).length} IT closet${Object.keys(perCloset).length===1?'':'s'}`]);
       const fp={}; runs.forEach(r=>{ if(TYPES[r.it.type].dev==='wall'){ const k=r.it.lines.length; fp[k]=(fp[k]||0)+1; } }); Object.entries(fp).forEach(([k,q])=>out.push(['Faceplates',`${k}-port faceplate with jacks`,q,'One per wall drop']));
       out.push(['Connectors','Jacks or field-terminated plugs, matched to the cable category',n*2,'One at each end of every line']); out.push(['Patch cords','Closet patch cords',n,'One per line']); out.push(['Labels','Printed labels (TIA-606), both ends',n*2,'Same label at the panel port and the outlet']); }
-    Object.entries(cableTotals()).forEach(([k,v])=>out.push(['Cable',`${CABLE[k].name} plenum or riser as the space requires`,Math.ceil(v.ft/1000),`1,000 ft boxes for ${fmt(v.ft)} ft`]));
+    { const BP=boxPlan(), BL=Math.max(100,cfg.boxLen||1000); Object.entries(cableTotals()).forEach(([k,v])=>{ const P=BP[k]; out.push(['Cable',`${CABLE[k].name} plenum or riser as the space requires`,P?P.boxes.length:Math.ceil(v.ft/BL),`${fmt(BL)} ft boxes for ${fmt(v.ft)} ft${P&&P.at>1?`, pulled ${P.at} at a time`:''}`]); }); }
     const RL=rackLayout(), R=cfg.rack, cm=RL.placed.filter(x=>x.kind==='cm').length, sh=RL.placed.filter(x=>x.kind==='shelf').length, bl=RL.placed.filter(x=>x.kind==='blank').length;
     out.push(['Rack',`${RACKS[R.type].name}, ${R.height}U${R.orient==='v'?', vertical mount':''}${RACKS[R.type].depth?`, ${R.depth} in usable depth`:''}`,1,`${RL.used}U used, ${RL.free}U free`]);
     if(cm) out.push(['Rack accessories','Horizontal cable manager, 1U',cm,'One under each patch panel']); if(sh) out.push(['Rack accessories','Rack shelf',sh,'For desktop gear and the ISP modem']); if(bl) out.push(['Rack accessories','Blank panel, 1U',bl,'Keeps airflow front to back']);
@@ -1233,7 +1255,7 @@ input.reqin{width:100%;min-width:110px;font:inherit;font-size:13.5px;padding:5px
   // ---------- home runs tab: progress, QC, lines, boxes, documents ----------
   const GUIDE=[
     ['Plan',['Walk every pathway before pulling: ceiling access, rated walls that will need firestopping, and where each drop lands.','Keep each line inside 295 ft. A drop near the limit needs a closer IT closet or a shorter route, not a longer patch cord.','Pull every line to a drop together, so a two-port data drop gets both cables in one pass.']],
-    ['Pull',['Pull the longest lines first from full boxes and finish with short lines from the leftovers; the box plan below does the sorting.','Stay under 25 lbf of pulling tension on 4-pair cable and keep the bend radius at least 4 times the cable diameter. Never kink or step on cable.','Support cable every 4 to 5 ft on J-hooks. Never lay it on ceiling tiles or tie it to pipes, conduit, sprinkler lines or ceiling-grid wires.','Keep clear of power cables and light fixtures, and cross power at 90 degrees.','Write the line label on the jacket at both ends as you pull, so nothing gets mixed up before the permanent labels go on.']],
+    ['Pull',['Pull the longest lines first from full boxes and finish with short lines from the leftovers; the box plan below does the sorting. To pull several cables at once, set how many boxes go on the pulling rack and follow the pull list: each pull bundles one cable from each box.','Stay under 25 lbf of pulling tension on 4-pair cable and keep the bend radius at least 4 times the cable diameter. Never kink or step on cable.','Support cable every 4 to 5 ft on J-hooks. Never lay it on ceiling tiles or tie it to pipes, conduit, sprinkler lines or ceiling-grid wires.','Keep clear of power cables and light fixtures, and cross power at 90 degrees.','Write the line label on the jacket at both ends as you pull, so nothing gets mixed up before the permanent labels go on.']],
     ['Terminate',['Use one wiring standard everywhere, normally T568B, at the panel and the jack.','Untwist no more than 0.5 in (13 mm) of each pair and keep the jacket up to the termination.','Use components rated for the cable: Cat6A jacks and panels on Cat6A.','Leave the service loop at the closet and a small loop at the outlet. Bundle with hook-and-loop straps, never tight zip ties.']],
     ['Label',['Use the same label at both ends: the patch panel port and the faceplate or jack (TIA-606).','The label is the panel and port, so IT1-A07 is IT closet IT1, panel A, port 7. Don’t renumber after labels are printed.','Put labels where they can be read without unplugging anything.']],
     ['Test',['Certify each permanent link to its category with a cable certifier. At minimum, verify wire map, length and continuity.','Record pass or fail and the measured length here. A failed line gets re-terminated at both ends and retested before anything else.','Test after the faceplates are on and the panel is dressed, so the result reflects the finished install.']],
@@ -1255,10 +1277,14 @@ input.reqin{width:100%;min-width:110px;font:inherit;font-size:13.5px;padding:5px
       <td class="num"><input type="number" min="0" step="1" class="lenin" data-len="${L.l.id}" value="${esc(L.l.t.len||'')}" placeholder="ft" aria-label="${esc(L.label)}: measured length in feet"></td></tr>`).join(''):`<tr><td colspan="10" class="hint">${n?'No lines match this filter.':'No lines yet. Place drops on the floor plan.'}</td></tr>`;
     document.querySelector('#linesTbl tfoot').innerHTML=n?`<tr><td colspan="2"><b>${n} line${n===1?'':'s'}</b>${vis.length!==n?` <span class="hint">${vis.length} shown</span>`:''}</td><td class="num"><b>${fmt(LS.reduce((s,L)=>s+(L.r.total||0),0))} ft</b></td><td colspan="7"></td></tr>`:'';
     document.getElementById('bulk').innerHTML=vis.length?`<span class="hint">For the ${vis.length} line${vis.length===1?'':'s'} shown:</span>${STEPS.filter(([k])=>k!=='test').map(([k,,s])=>`<button type="button" class="btn small" data-bulk="${k}">Mark ${s==='Pull'?'pulled':s==='Label'?'labeled':'terminated at '+s.toLowerCase()}</button>`).join('')}`:'';
-    const BP=boxPlan(), BL=Math.max(100,cfg.boxLen||1000);
-    document.getElementById('boxes').innerHTML=Object.keys(BP).length?Object.entries(BP).map(([k,boxes])=>{ const used=boxes.reduce((s,b)=>s+(BL-b.left),0), left=boxes.reduce((s,b)=>s+b.left,0);
-      return `<h4 style="margin:12px 0 6px">${CABLE[k].name}: ${boxes.length} box${boxes.length>1?'es':''} of ${fmt(BL)} ft, ${fmt(used)} ft used, ${fmt(left)} ft left over (${fmt(left/(boxes.length*BL)*100)}%)</h4>
-        <div class="tablewrap"><table class="tbl"><thead><tr><th>Box</th><th>Pull these lines, longest first</th><th class="num">Used</th><th class="num">Left</th></tr></thead><tbody>${boxes.map(b=>`<tr><td><b>${k==='cat6a'?'6A':'6'}-${b.n}</b></td><td>${b.lines.map(L=>`${esc(L.label)} <span class="hint" style="display:inline">${fmt(L.r.total)} ft</span>`).join(', ')}</td><td class="num">${fmt(BL-b.left)} ft</td><td class="num">${fmt(b.left)} ft</td></tr>`).join('')}</tbody></table></div>`; }).join('')+`<p class="hint learn" style="margin-top:8px">Write the box number on each box. Keep leftovers over about 50 ft for patch-length jobs or the next site; shorter pieces are scrap.</p>`:`<p class="hint">Set the scale on each floor so lines can be measured.</p>`;
+    const BP=boxPlan(), BL=Math.max(100,cfg.boxLen||1000), PB=document.getElementById('pullBoxes'), PM=pullMax();
+    PB.max=PM; PB.disabled=!Object.keys(BP).length; if(document.activeElement!==PB) PB.value=Math.max(1,Math.min(PM,Math.round(+cfg.pullBoxes)||1));
+    const multiCl=new Set(measuredLines().map(L=>L.r.rk&&L.r.rk.id)).size>1;
+    document.getElementById('boxes').innerHTML=Object.keys(BP).length?Object.entries(BP).map(([k,{boxes,pulls,at}])=>{ const used=boxes.reduce((s,b)=>s+(BL-b.left),0), left=boxes.reduce((s,b)=>s+b.left,0), bn=b=>`${k==='cat6a'?'6A':'6'}-${b.n}`;
+      const pullTbl=at>1?`<p class="hint" style="margin:6px 0">${pulls.length} pull${pulls.length>1?'s':''} of up to ${at} cables. Each pull takes one cable from each box on the rack; cut every cable to its own line’s length.</p>
+        <div class="tablewrap"><table class="tbl"><thead><tr><th>Pull</th><th>Lines in this pull, and the box each comes from</th><th class="num">Longest</th><th>Boxes on the rack</th></tr></thead><tbody>${pulls.map(p=>`<tr><td><b>${p.n}</b>${multiCl&&p.rk?`<span class="hint">${esc(p.rk.code||p.rk.label)}</span>`:''}</td><td>${p.lines.map(({L,box})=>`${esc(L.label)} <span class="hint" style="display:inline">${fmt(L.r.total)} ft from ${bn(box)}</span>`).join(', ')}</td><td class="num">${fmt(p.lines[0].L.r.total)} ft</td><td>${[p.start.length?`Load ${p.start.map(bn).join(', ')}`:'',...p.swaps.map(x=>`Take off ${bn(x.out)} (${fmt(x.outLeft)} ft left), put on ${bn(x.in)}${x.isNew?' (new)':` (${fmt(x.inLeft)} ft left)`}`)].filter(Boolean).join('<br>')||'<span class="hint" style="display:inline">No change</span>'}</td></tr>`).join('')}</tbody></table></div>`:'';
+      return `<h4 style="margin:12px 0 6px">${CABLE[k].name}: ${boxes.length} box${boxes.length>1?'es':''} of ${fmt(BL)} ft${at>1?`, pulled ${at} at a time`:''}, ${fmt(used)} ft used, ${fmt(left)} ft left over (${fmt(left/(boxes.length*BL)*100)}%)</h4>${pullTbl}
+        <div class="tablewrap"><table class="tbl"><thead><tr><th>Box</th><th>${at>1?'Lines from this box, in pull order':'Pull these lines, longest first'}</th><th class="num">Used</th><th class="num">Left</th></tr></thead><tbody>${boxes.map(b=>`<tr><td><b>${bn(b)}</b></td><td>${b.lines.map(L=>`${esc(L.label)} <span class="hint" style="display:inline">${fmt(L.r.total)} ft</span>`).join(', ')}</td><td class="num">${fmt(BL-b.left)} ft</td><td class="num">${fmt(b.left)} ft</td></tr>`).join('')}</tbody></table></div>`; }).join('')+`<p class="hint learn" style="margin-top:8px">Write the box number on each box. Keep leftovers over about 50 ft for patch-length jobs or the next site; shorter pieces are scrap.</p>`:`<p class="hint">Set the scale on each floor so lines can be measured.</p>`;
     const bad=LS.filter(L=>L.r.st==='bad'||L.l.t.res==='fail').length, warn=LS.filter(L=>L.r.st==='warn').length, B=document.getElementById('b-runs');
     B.textContent=bad?`${bad} to fix`:n?`${done} of ${n} done`:'No lines'; B.className='badge '+(bad?'bad':warn?'warn':done===n&&n?'ok':'');
     const P=document.getElementById('b-plan'), unscaled=floors.filter(f=>!f.grid&&!f.ppf).length; P.textContent=unscaled?'Set scale':`${n} line${n===1?'':'s'}`; P.className='badge '+(unscaled?'warn':''); }
@@ -1268,7 +1294,8 @@ input.reqin{width:100%;min-width:110px;font:inherit;font-size:13.5px;padding:5px
     if(t.dataset.test!=null&&t.matches('select')){ const L=lineById(t.dataset.test); if(L){ setTest(L,t.value,null); afterLineEdit(); } return; }
     if(t.dataset.len){ const L=lineById(t.dataset.len); if(L){ setTest(L,null,t.value); afterLineEdit(); } return; }
     if(t.id==='lineFilter'){ UI.lineFilter=t.value; renderLines(); save(); }
-    if(t.id==='techIn'){ cfg.tech=t.value.trim(); save(); renderLines(); } });
+    if(t.id==='techIn'){ cfg.tech=t.value.trim(); save(); renderLines(); }
+    if(t.id==='pullBoxes'){ cfg.pullBoxes=Math.max(1,Math.min(pullMax(),Math.round(+t.value)||1)); t.value=cfg.pullBoxes; update(); } });
   document.getElementById('p-runs').addEventListener('click',e=>{ if(e.target.closest('[data-relabel]')){ allLines().forEach(L=>{ if(L.l.s.label&&L.l.labelAt!==L.label){ L.l.labelAt=L.label; L.l.s.label=stamp(); } }); afterLineEdit(); return; }
     const sf=e.target.closest('[data-showf]'); if(sf){ UI.lineFilter=sf.dataset.showf; renderLines(); document.getElementById('linesTbl').scrollIntoView({block:'start'}); return; }
     const f=e.target.closest('[data-filter]'); if(f){ UI.lineFilter=UI.lineFilter===f.dataset.filter?'all':f.dataset.filter; renderLines(); save(); return; }
@@ -1416,8 +1443,11 @@ input.reqin{width:100%;min-width:110px;font:inherit;font-size:13.5px;padding:5px
       // client-facing: lead with the completion summary and the line list, ahead of the equipment detail
       if(o.linesDetail!=='full'&&B.length>B0){ const moved=B.splice(B0); B.unshift(...moved); }
       if(o.qc&&n){ const Q=qc().filter(x=>x.t!=='ok'); H('Quality Control'); if(Q.length) B.push({t:'table',heads:['Status','Item','Detail'],widths:[1300,2000,6060],rows:Q.map(x=>[{status:x.t,text:x.t==='bad'?'Fix':x.t==='warn'?'Check':'Note'},{runs:[{text:x.b,b:true}]},{runs:[{text:x.m}]}])}); else P('No quality-control items are open.'); }
-      if(o.cable){ const ct=cableTotals(), BP=boxPlan(), BL=Math.max(100,cfg.boxLen||1000); if(Object.keys(ct).length){ H('Cable to Order'); B.push({t:'table',heads:['Cable','Lines','Total length','Boxes','Left over'],widths:[2000,1300,2200,1600,2260],rows:Object.entries(ct).map(([k,v])=>{ const bx=BP[k]||[]; return [{runs:[{text:CABLE[k].name,b:true}]},{runs:[{text:String(v.n)}]},{runs:[{text:fmt(v.ft)+' ft'}]},{runs:[{text:`${bx.length} × ${fmt(BL)} ft`,b:true}]},{runs:[{text:fmt(bx.reduce((s,b)=>s+b.left,0))+' ft'}]}]; })});
-        Object.entries(BP).forEach(([k,boxes])=>B.push({t:'table',heads:['Box','Lines, longest first','Left'],widths:[1000,6860,1500],rows:boxes.map(b=>[{runs:[{text:`${k==='cat6a'?'6A':'6'}-${b.n}`,b:true}]},{runs:[{text:b.lines.map(L=>`${L.label} (${fmt(L.r.total)} ft)`).join(', '),sz:18}]},{runs:[{text:fmt(b.left)+' ft'}]}])})); } }
+      if(o.cable){ const ct=cableTotals(), BP=boxPlan(), BL=Math.max(100,cfg.boxLen||1000); if(Object.keys(ct).length){ H('Cable to Order'); B.push({t:'table',heads:['Cable','Lines','Total length','Boxes','Left over'],widths:[2000,1300,2200,1600,2260],rows:Object.entries(ct).map(([k,v])=>{ const bx=BP[k]?BP[k].boxes:[]; return [{runs:[{text:CABLE[k].name,b:true}]},{runs:[{text:String(v.n)}]},{runs:[{text:fmt(v.ft)+' ft'}]},{runs:[{text:`${bx.length} × ${fmt(BL)} ft`,b:true}]},{runs:[{text:fmt(bx.reduce((s,b)=>s+b.left,0))+' ft'}]}]; })});
+        Object.entries(BP).forEach(([k,{boxes,pulls,at}])=>{ const bn=b=>`${k==='cat6a'?'6A':'6'}-${b.n}`;
+          if(at>1){ P([{text:`${CABLE[k].name}: ${pulls.length} pull${pulls.length>1?'s':''} with ${at} boxes on the pulling rack. Each pull takes one cable from each box.`,c:'grey',sz:20}]);
+            B.push({t:'table',heads:['Pull','Lines and the box each comes from','Box changes'],widths:[800,5560,3000],rows:pulls.map(p=>[{runs:[{text:String(p.n),b:true}]},{runs:[{text:p.lines.map(({L,box})=>`${L.label} (${fmt(L.r.total)} ft, ${bn(box)})`).join(', '),sz:18}]},{runs:[{text:[p.start.length?`Load ${p.start.map(bn).join(', ')}`:'',...p.swaps.map(x=>`${bn(x.in)} replaces ${bn(x.out)}`)].filter(Boolean).join('; ')||'None',sz:18}]}])}); }
+          B.push({t:'table',heads:['Box',at>1?'Lines, in pull order':'Lines, longest first','Left'],widths:[1000,6860,1500],rows:boxes.map(b=>[{runs:[{text:bn(b),b:true}]},{runs:[{text:b.lines.map(L=>`${L.label} (${fmt(L.r.total)} ft)`).join(', '),sz:18}]},{runs:[{text:fmt(b.left)+' ft'}]}])}); }); } }
       if(o.plans){ for(const f of floors){ const d=await pngFor(f); if(d){ B.push({t:'h',lvl:3,text:`Floor Plan: ${f.name}`}); B.push({t:'png',data:d,caption:o.linesDetail==='full'?`${f.name} home runs. Solid lines are drawn routes, dashed lines are estimates; lengths include allowances.`:`${f.name}: every line with its label, and its status.`}); } } }
       const WF=(o.wifiDetails||o.wifiReq||o.wifiRoutes||o.wifiSignal||o.wifiSecondary||o.wifiThroughput||o.wifiAps)?await wifiBlocks(o):[];
       return {summary:this.summary(),equip:bom(),blocks:B,wifi:WF}; },
